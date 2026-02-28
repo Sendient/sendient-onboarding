@@ -19,8 +19,8 @@ WRAPPER_NAME="claude"
 # File URLs — set these to gist raw URLs for no-auth installs, or leave
 # unset to fall back to SENDIENT_REPO_URL + GITHUB_TOKEN.
 REPO_RAW_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/company-claude/main}"
-URL_WRAPPER="${SENDIENT_URL_WRAPPER:-$REPO_RAW_URL/sendient-claude}"
-URL_RUNFILE="${SENDIENT_URL_RUNFILE:-$REPO_RAW_URL/Runfile}"
+URL_WRAPPER="${SENDIENT_URL_WRAPPER:-https://gist.githubusercontent.com/MichaelJarvisSendient/63c13dab54a26595d05e9f041a943679/raw/sendient-claude}"
+URL_RUNFILE="${SENDIENT_URL_RUNFILE:-https://gist.githubusercontent.com/MichaelJarvisSendient/a7f2ebc6d337391d102e5c2febce1200/raw/Runfile}"
 
 # Auth for private repo — only needed when fetching from raw.githubusercontent.com
 CURL_AUTH=()
@@ -186,13 +186,14 @@ elif [ ! -f "$GLOBAL_RUNFILE" ]; then
   printf '%s\n' "$OUR_BLOCK" > "$GLOBAL_RUNFILE"
   ok "Runfile tasks installed to $GLOBAL_RUNFILE"
 elif grep -qF "$BEGIN_MARKER" "$GLOBAL_RUNFILE"; then
-  # Replace existing block
+  # Replace existing block: write new block to temp, then swap via sed
+  block_file=$(mktemp)
+  printf '%s\n' "$OUR_BLOCK" > "$block_file"
   tmpfile=$(mktemp)
-  awk -v begin="$BEGIN_MARKER" -v end="$END_MARKER" -v block="$OUR_BLOCK" '
-    $0 ~ begin { skip=1; print block; next }
-    $0 ~ end   { skip=0; next }
-    !skip       { print }
-  ' "$GLOBAL_RUNFILE" > "$tmpfile" && mv "$tmpfile" "$GLOBAL_RUNFILE"
+  sed -e "/^${BEGIN_MARKER}/,/^${END_MARKER}/{ /^${BEGIN_MARKER}/{
+    r $block_file
+  }; d; }" "$GLOBAL_RUNFILE" > "$tmpfile" && mv "$tmpfile" "$GLOBAL_RUNFILE"
+  rm -f "$block_file"
   ok "Runfile tasks updated in $GLOBAL_RUNFILE"
 else
   # Append our block

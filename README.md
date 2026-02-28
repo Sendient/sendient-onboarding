@@ -13,7 +13,7 @@ Wrapper and tooling for running Claude Code with the Sendient SREE methodology b
 ./install.sh
 
 # Remote (no token needed — uses secret gists)
-curl -fsSL <GIST_URL_INSTALL_SH> | bash
+curl -fsSL https://gist.githubusercontent.com/MichaelJarvisSendient/2c97109bf1ee7709b12184e4d2a7db7b/raw/install.sh | bash
 ```
 
 **Windows (PowerShell):**
@@ -23,12 +23,8 @@ curl -fsSL <GIST_URL_INSTALL_SH> | bash
 pwsh ./install.ps1
 
 # Remote (no token needed — uses secret gists)
-irm <GIST_URL_INSTALL_PS1> | iex
+irm https://gist.githubusercontent.com/MichaelJarvisSendient/10974e9c87d86f3d9c8a7fe4fdd3c915/raw/install.ps1 | iex
 ```
-
-> **Note:** The `<GIST_URL_*>` placeholders above are replaced with real URLs
-> after the first push to `main` triggers the gist sync workflow. See
-> [Distribution](#distribution) below.
 
 The installer checks for (or installs) Claude Code and `run`, then:
 

@@ -10,27 +10,18 @@
 
 # @desc Install/update Sendient Claude wrapper, PATH, MCP config, and Runfile tasks
 company_claude:install() {
-    SENDIENT_REPO_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/company-claude/main}"
-    if [ -z "${GITHUB_TOKEN:-}" ]; then
-        echo "✗ GITHUB_TOKEN not set (required for private repo access)" >&2
-        return 1
-    fi
-    echo "── Fetching installer from $SENDIENT_REPO_URL ──"
-    curl -fsSL -H "Authorization: token $GITHUB_TOKEN" "$SENDIENT_REPO_URL/install.sh" | GITHUB_TOKEN="$GITHUB_TOKEN" bash
+    SENDIENT_URL_INSTALL="${SENDIENT_URL_INSTALL:-https://gist.githubusercontent.com/MichaelJarvisSendient/2c97109bf1ee7709b12184e4d2a7db7b/raw/install.sh}"
+    echo "── Fetching installer ──"
+    curl -fsSL "$SENDIENT_URL_INSTALL" | bash
 }
 
 # @desc Install/update Sendient Claude wrapper, PATH, MCP config, and Runfile tasks
 # @os windows
 # @shell powershell
 company_claude:install() {
-    $RepoUrl = if ($env:SENDIENT_REPO_URL) { $env:SENDIENT_REPO_URL } else { 'https://raw.githubusercontent.com/Sendient/company-claude/main' }
-    if (-not $env:GITHUB_TOKEN) {
-        Write-Error 'GITHUB_TOKEN not set (required for private repo access)'
-        exit 1
-    }
-    Write-Host "── Fetching installer from $RepoUrl ──"
-    $h = @{ Authorization = "token $($env:GITHUB_TOKEN)" }
-    $script = (Invoke-WebRequest -Uri "$RepoUrl/install.ps1" -UseBasicParsing -Headers $h).Content
+    $InstallUrl = if ($env:SENDIENT_URL_INSTALL) { $env:SENDIENT_URL_INSTALL } else { 'https://gist.githubusercontent.com/MichaelJarvisSendient/10974e9c87d86f3d9c8a7fe4fdd3c915/raw/install.ps1' }
+    Write-Host '── Fetching installer ──'
+    $script = (Invoke-WebRequest -Uri $InstallUrl -UseBasicParsing).Content
     Invoke-Expression $script
 }
 
