@@ -1,0 +1,85 @@
+name: Sync File to Gist
+description: >
+  Updates a secret gist with the contents of a file from the repository.
+  If no gist URL is provided, creates a new secret gist and stores the URL
+  as a repository variable named after the file.
+
+inputs:
+  file-path:
+    description: Path to the file to sync (relative to repo root)
+    required: true
+  gist-url:
+    description: URL of an existing gist to update. If empty, a new gist will be created.
+    required: false
+    default: ''
+  token:
+    description: GitHub token with gist scope and repo variable write access
+    required: true
+
+outputs:
+  gist-url:
+    description: URL of the created or updated gist
+    value: ${{ steps.sync.outputs.gist-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Sync file to gist
+      id: sync
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        filename="${{ inputs.file-path }}"
+        filename="${filename##*/}"
+        content=$(cat "${{ inputs.file-path }}")
+
+        if [[ -z "${{ inputs.gist-url }}" ]]; then
+          echo "No gist URL provided, creating new secret gist..."
+
+          response=$(jq -n \
+            --arg filename "$filename" \
+            --arg content "$content" \
+            '{"public": false, "files": {($filename): {"content": $content}}}' \
+            | gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "/gists" \
+              --input -)
+
+          gist_url=$(echo "$response" | jq -r '.html_url')
+
+          # Derive a variable name from the filename, e.g. my-file.txt -> GIST_URL_MY_FILE_TXT
+          var_name="GIST_URL_${filename^^}"
+          var_name="${var_name//[^A-Z0-9]/_}"
+
+          echo "Storing gist URL as repo variable '$var_name'..."
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/variables" \
+            -f "name=$var_name" \
+            -f "value=$gist_url" \
+          || gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/variables/$var_name" \
+            -f "value=$gist_url"
+        else
+          gist_url="${{ inputs.gist-url }}"
+          gist_id="${gist_url##*/}"
+
+          echo "Updating existing gist $gist_id..."
+
+          jq -n \
+            --arg filename "$filename" \
+            --arg content "$content" \
+            '{"files": {($filename): {"content": $content}}}' \
+            | gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/gists/$gist_id" \
+              --input -
+        fi
+
+        echo "gist-url=$gist_url" >> "$GITHUB_OUTPUT"

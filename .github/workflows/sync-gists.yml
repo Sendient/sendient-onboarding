@@ -1,0 +1,39 @@
+name: Sync files to gists
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - install.sh
+      - install.ps1
+      - sendient-claude
+      - sendient-claude.cmd
+      - Runfile
+
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - file: install.sh
+            var: GIST_URL_INSTALL_SH
+          - file: install.ps1
+            var: GIST_URL_INSTALL_PS1
+          - file: sendient-claude
+            var: GIST_URL_SENDIENT_CLAUDE
+          - file: sendient-claude.cmd
+            var: GIST_URL_SENDIENT_CLAUDE_CMD
+          - file: Runfile
+            var: GIST_URL_RUNFILE
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync ${{ matrix.file }} to gist
+        uses: ./.github/actions/sync-file-to-gist
+        with:
+          file-path: ${{ matrix.file }}
+          gist-url: ${{ vars[matrix.var] }}
+          token: ${{ secrets.GIST_TOKEN }}

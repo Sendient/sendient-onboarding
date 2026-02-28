@@ -14,9 +14,13 @@ $ErrorActionPreference = 'Stop'
 
 $InstallDir = if ($env:SENDIENT_INSTALL_DIR) { $env:SENDIENT_INSTALL_DIR } else { Join-Path $env:USERPROFILE '.sendient\bin' }
 $WrapperName = 'claude.cmd'
-$RepoRawUrl = if ($env:SENDIENT_REPO_URL) { $env:SENDIENT_REPO_URL } else { 'https://raw.githubusercontent.com/Sendient/company-claude/main' }
 
-# Auth headers for private repo
+# File URLs — set these to gist raw URLs for no-auth installs
+$RepoRawUrl = if ($env:SENDIENT_REPO_URL) { $env:SENDIENT_REPO_URL } else { 'https://raw.githubusercontent.com/Sendient/company-claude/main' }
+$UrlWrapper = if ($env:SENDIENT_URL_WRAPPER) { $env:SENDIENT_URL_WRAPPER } else { "$RepoRawUrl/sendient-claude.cmd" }
+$UrlRunfile = if ($env:SENDIENT_URL_RUNFILE) { $env:SENDIENT_URL_RUNFILE } else { "$RepoRawUrl/Runfile" }
+
+# Auth headers for private repo — only needed when fetching from raw.githubusercontent.com
 $AuthHeaders = @{}
 if ($env:GITHUB_TOKEN) {
     $AuthHeaders = @{ Authorization = "token $($env:GITHUB_TOKEN)" }
@@ -40,8 +44,8 @@ Write-Host ''
 Write-Host 'Sendient Claude — Installer' -ForegroundColor White
 Write-Host ''
 
-if (-not $LocalMode -and -not $env:GITHUB_TOKEN) {
-    Write-Fail 'GITHUB_TOKEN is required for remote installs (private repo). Set it first: $env:GITHUB_TOKEN = "ghp_..."'
+if (-not $LocalMode -and -not $env:GITHUB_TOKEN -and -not $env:SENDIENT_URL_WRAPPER) {
+    Write-Fail 'GITHUB_TOKEN is required for remote installs from private repo. Set it first: $env:GITHUB_TOKEN = "ghp_..." Or set SENDIENT_URL_WRAPPER / SENDIENT_URL_RUNFILE to gist raw URLs.'
 }
 
 # ── Step 1: Ensure Claude Code is installed ──────────────────────────
@@ -120,12 +124,11 @@ if ($LocalMode) {
     Copy-Item $LocalWrapper $WrapperPath -Force
     Write-Ok 'Wrapper installed (from local repo)'
 } else {
-    $wrapperUrl = "$RepoRawUrl/sendient-claude.cmd"
     try {
-        Invoke-WebRequest -Uri $wrapperUrl -OutFile $WrapperPath -UseBasicParsing -Headers $AuthHeaders
+        Invoke-WebRequest -Uri $UrlWrapper -OutFile $WrapperPath -UseBasicParsing -Headers $AuthHeaders
         Write-Ok 'Wrapper installed (downloaded)'
     } catch {
-        Write-Fail "Failed to download wrapper from $wrapperUrl"
+        Write-Fail "Failed to download wrapper from $UrlWrapper"
     }
 }
 
@@ -197,7 +200,7 @@ if ($LocalMode) {
     }
 } else {
     try {
-        $runfileContent = (Invoke-WebRequest -Uri "$RepoRawUrl/Runfile" -UseBasicParsing -Headers $AuthHeaders).Content
+        $runfileContent = (Invoke-WebRequest -Uri $UrlRunfile -UseBasicParsing -Headers $AuthHeaders).Content
         $lines = $runfileContent -split "`n"
         $inBlock = $false
         $blockLines = @()

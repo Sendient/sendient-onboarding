@@ -15,9 +15,14 @@ set -euo pipefail
 
 INSTALL_DIR="${SENDIENT_INSTALL_DIR:-$HOME/.sendient/bin}"
 WRAPPER_NAME="claude"
-REPO_RAW_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/company-claude/main}"
 
-# Auth for private repo — GITHUB_TOKEN is required for remote installs
+# File URLs — set these to gist raw URLs for no-auth installs, or leave
+# unset to fall back to SENDIENT_REPO_URL + GITHUB_TOKEN.
+REPO_RAW_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/company-claude/main}"
+URL_WRAPPER="${SENDIENT_URL_WRAPPER:-$REPO_RAW_URL/sendient-claude}"
+URL_RUNFILE="${SENDIENT_URL_RUNFILE:-$REPO_RAW_URL/Runfile}"
+
+# Auth for private repo — only needed when fetching from raw.githubusercontent.com
 CURL_AUTH=()
 WGET_AUTH=()
 if [ -n "${GITHUB_TOKEN:-}" ]; then
@@ -42,8 +47,8 @@ fail()  { printf '  \033[1;31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 printf '\n\033[1mSendient Claude — Installer\033[0m\n\n'
 
-if ! $LOCAL_MODE && [ -z "${GITHUB_TOKEN:-}" ]; then
-  fail "GITHUB_TOKEN is required for remote installs (private repo).\n     Export it first: export GITHUB_TOKEN=ghp_..."
+if ! $LOCAL_MODE && [ -z "${GITHUB_TOKEN:-}" ] && [ -z "${SENDIENT_URL_WRAPPER:-}" ]; then
+  fail "GITHUB_TOKEN is required for remote installs from private repo.\n     Export it first: export GITHUB_TOKEN=ghp_...\n     Or set SENDIENT_URL_WRAPPER / SENDIENT_URL_RUNFILE to gist raw URLs."
 fi
 
 # ── Step 1: Ensure Claude Code is installed ─────────────────────────
@@ -103,9 +108,9 @@ if $LOCAL_MODE; then
   ok "Wrapper installed (from local repo)"
 else
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "${CURL_AUTH[@]}" "$REPO_RAW_URL/sendient-claude" -o "$WRAPPER_PATH"
+    curl -fsSL "${CURL_AUTH[@]}" "$URL_WRAPPER" -o "$WRAPPER_PATH"
   elif command -v wget >/dev/null 2>&1; then
-    wget -qO "$WRAPPER_PATH" "${WGET_AUTH[@]}" "$REPO_RAW_URL/sendient-claude"
+    wget -qO "$WRAPPER_PATH" "${WGET_AUTH[@]}" "$URL_WRAPPER"
   else
     fail "Neither curl nor wget found."
   fi
@@ -169,9 +174,9 @@ if $LOCAL_MODE && [ -f "$SCRIPT_DIR/Runfile" ]; then
 elif ! $LOCAL_MODE; then
   # Download Runfile from remote
   if command -v curl >/dev/null 2>&1; then
-    OUR_BLOCK=$(curl -fsSL "${CURL_AUTH[@]}" "$REPO_RAW_URL/Runfile" | sed -n "/^${BEGIN_MARKER}/,/^${END_MARKER}/p")
+    OUR_BLOCK=$(curl -fsSL "${CURL_AUTH[@]}" "$URL_RUNFILE" | sed -n "/^${BEGIN_MARKER}/,/^${END_MARKER}/p")
   elif command -v wget >/dev/null 2>&1; then
-    OUR_BLOCK=$(wget -qO- "${WGET_AUTH[@]}" "$REPO_RAW_URL/Runfile" | sed -n "/^${BEGIN_MARKER}/,/^${END_MARKER}/p")
+    OUR_BLOCK=$(wget -qO- "${WGET_AUTH[@]}" "$URL_RUNFILE" | sed -n "/^${BEGIN_MARKER}/,/^${END_MARKER}/p")
   fi
 fi
 
