@@ -1,0 +1,262 @@
+# ── BEGIN company_claude ──────────────────────────────────────────────
+# Sendient Claude — Task Runner
+# Usage: run <task> [args]
+
+# ── Configuration ────────────────────────────────────────────────────
+# Required env vars: GITHUB_TOKEN, SENDIENT_EPICS_DIR, SENDIENT_EPICS_FILE
+# Optional: SENDIENT_INSTALL_DIR (default: ~/.sendient/bin), SENDIENT_REPO_URL
+
+# ── Install & Update ────────────────────────────────────────────────
+
+# @desc Install/update Sendient Claude wrapper, PATH, MCP config, and Runfile tasks
+company_claude:install() {
+    SENDIENT_REPO_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/company-claude/main}"
+    if [ -z "${GITHUB_TOKEN:-}" ]; then
+        echo "✗ GITHUB_TOKEN not set (required for private repo access)" >&2
+        return 1
+    fi
+    echo "── Fetching installer from $SENDIENT_REPO_URL ──"
+    curl -fsSL -H "Authorization: token $GITHUB_TOKEN" "$SENDIENT_REPO_URL/install.sh" | GITHUB_TOKEN="$GITHUB_TOKEN" bash
+}
+
+# @desc Install/update Sendient Claude wrapper, PATH, MCP config, and Runfile tasks
+# @os windows
+# @shell powershell
+company_claude:install() {
+    $RepoUrl = if ($env:SENDIENT_REPO_URL) { $env:SENDIENT_REPO_URL } else { 'https://raw.githubusercontent.com/Sendient/company-claude/main' }
+    if (-not $env:GITHUB_TOKEN) {
+        Write-Error 'GITHUB_TOKEN not set (required for private repo access)'
+        exit 1
+    }
+    Write-Host "── Fetching installer from $RepoUrl ──"
+    $h = @{ Authorization = "token $($env:GITHUB_TOKEN)" }
+    $script = (Invoke-WebRequest -Uri "$RepoUrl/install.ps1" -UseBasicParsing -Headers $h).Content
+    Invoke-Expression $script
+}
+
+# @desc Update wrapper script, Runfile tasks, and check dependency versions
+company_claude:update() {
+    # Re-run the remote installer (idempotent — updates everything in place)
+    company_claude:install
+}
+
+# @desc Update wrapper script, Runfile tasks, and check dependency versions
+# @os windows
+# @shell powershell
+company_claude:update() {
+    company_claude:install
+}
+
+# @desc Check installation health
+company_claude:doctor() {
+    SENDIENT_INSTALL_DIR="${SENDIENT_INSTALL_DIR:-$HOME/.sendient/bin}"
+    SENDIENT_EPICS_DIR="${SENDIENT_EPICS_DIR:?SENDIENT_EPICS_DIR not set}"
+    echo "── Sendient Claude Doctor ──"
+    echo ""
+    ok=true
+
+    # Claude Code
+    if command -v claude >/dev/null 2>&1; then
+        echo "✓ Claude Code: $(claude --version 2>/dev/null)"
+    else
+        echo "✗ Claude Code not found"
+        ok=false
+    fi
+
+    # run tool
+    if command -v run >/dev/null 2>&1; then
+        echo "✓ run tool: $(run --version 2>/dev/null)"
+    else
+        echo "✗ run tool not found"
+        ok=false
+    fi
+
+    # Wrapper
+    WRAPPER="$SENDIENT_INSTALL_DIR/claude"
+    if [ -x "$WRAPPER" ]; then
+        RESOLVED="$(command -v claude 2>/dev/null)"
+        if [ "$RESOLVED" = "$WRAPPER" ]; then
+            echo "✓ Wrapper active at $WRAPPER"
+        else
+            echo "! Wrapper installed at $WRAPPER but 'claude' resolves to $RESOLVED"
+            echo "  Ensure $SENDIENT_INSTALL_DIR is first in PATH"
+            ok=false
+        fi
+    else
+        echo "✗ Wrapper not found at $WRAPPER"
+        ok=false
+    fi
+
+    # MCP config
+    if [ -f "$HOME/.claude.json" ] && command -v jq >/dev/null 2>&1; then
+        if jq -e '.mcpServers.runtool' "$HOME/.claude.json" >/dev/null 2>&1; then
+            echo "✓ runtool MCP server configured"
+        else
+            echo "! runtool MCP server not in ~/.claude.json"
+            ok=false
+        fi
+    fi
+
+    # Epics dir
+    if [ -d "$SENDIENT_EPICS_DIR" ]; then
+        count=$(ls "$SENDIENT_EPICS_DIR"/epic-*.md 2>/dev/null | wc -l | tr -d ' ')
+        echo "✓ Epics directory: $count epic files found"
+    else
+        echo "! Epics directory not found: $SENDIENT_EPICS_DIR"
+    fi
+
+    echo ""
+    if $ok; then
+        echo "✓ All checks passed"
+    else
+        echo "! Some issues found — run 'run company_claude:install' to fix"
+    fi
+}
+
+# @desc Check installation health
+# @os windows
+# @shell powershell
+company_claude:doctor() {
+    $InstallDir = if ($env:SENDIENT_INSTALL_DIR) { $env:SENDIENT_INSTALL_DIR } else { Join-Path $env:USERPROFILE '.sendient\bin' }
+    if (-not $env:SENDIENT_EPICS_DIR) { Write-Error 'SENDIENT_EPICS_DIR not set'; exit 1 }
+    $ok = $true
+
+    Write-Host '── Sendient Claude Doctor ──'
+    Write-Host ''
+
+    # Claude Code
+    $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
+    if ($claudeCmd) {
+        $v = try { & claude --version 2>$null } catch { 'unknown' }
+        Write-Host "  ✓ Claude Code: $v" -ForegroundColor Green
+    } else {
+        Write-Host '  ✗ Claude Code not found' -ForegroundColor Red
+        $ok = $false
+    }
+
+    # run tool
+    $runCmd = Get-Command run -ErrorAction SilentlyContinue
+    if ($runCmd) {
+        $v = try { & run --version 2>$null } catch { 'unknown' }
+        Write-Host "  ✓ run tool: $v" -ForegroundColor Green
+    } else {
+        Write-Host '  ✗ run tool not found' -ForegroundColor Red
+        $ok = $false
+    }
+
+    # Wrapper
+    $WrapperPath = Join-Path $InstallDir 'claude.cmd'
+    if (Test-Path $WrapperPath) {
+        $resolved = (Get-Command claude -ErrorAction SilentlyContinue).Source
+        if ($resolved -eq $WrapperPath) {
+            Write-Host "  ✓ Wrapper active at $WrapperPath" -ForegroundColor Green
+        } else {
+            Write-Host "  ! Wrapper installed at $WrapperPath but 'claude' resolves to $resolved" -ForegroundColor Yellow
+            Write-Host "    Ensure $InstallDir is first in PATH"
+            $ok = $false
+        }
+    } else {
+        Write-Host "  ✗ Wrapper not found at $WrapperPath" -ForegroundColor Red
+        $ok = $false
+    }
+
+    # MCP config
+    $claudeJson = Join-Path $env:USERPROFILE '.claude.json'
+    if (Test-Path $claudeJson) {
+        try {
+            $config = Get-Content $claudeJson -Raw | ConvertFrom-Json
+            if ($config.mcpServers.PSObject.Properties.Name -contains 'runtool') {
+                Write-Host '  ✓ runtool MCP server configured' -ForegroundColor Green
+            } else {
+                Write-Host '  ! runtool MCP server not in ~/.claude.json' -ForegroundColor Yellow
+                $ok = $false
+            }
+        } catch {}
+    }
+
+    # Epics dir
+    if (Test-Path $env:SENDIENT_EPICS_DIR) {
+        $count = (Get-ChildItem -Path $env:SENDIENT_EPICS_DIR -Filter 'epic-*.md' -ErrorAction SilentlyContinue).Count
+        Write-Host "  ✓ Epics directory: $count epic files found" -ForegroundColor Green
+    } else {
+        Write-Host "  ! Epics directory not found: $($env:SENDIENT_EPICS_DIR)" -ForegroundColor Yellow
+    }
+
+    Write-Host ''
+    if ($ok) {
+        Write-Host '  ✓ All checks passed' -ForegroundColor Green
+    } else {
+        Write-Host "  ! Some issues found — run 'run company_claude:install' to fix" -ForegroundColor Yellow
+    }
+}
+
+# @desc Uninstall Sendient Claude wrapper
+company_claude:uninstall() {
+    SENDIENT_INSTALL_DIR="${SENDIENT_INSTALL_DIR:-$HOME/.sendient/bin}"
+    rm -f "$SENDIENT_INSTALL_DIR/claude"
+    echo "✓ Wrapper removed from $SENDIENT_INSTALL_DIR"
+    echo "  Claude Code itself is unchanged — run 'claude' to use it directly."
+}
+
+# @desc Uninstall Sendient Claude wrapper
+# @os windows
+# @shell powershell
+company_claude:uninstall() {
+    $InstallDir = if ($env:SENDIENT_INSTALL_DIR) { $env:SENDIENT_INSTALL_DIR } else { Join-Path $env:USERPROFILE '.sendient\bin' }
+    $WrapperPath = Join-Path $InstallDir 'claude.cmd'
+    if (Test-Path $WrapperPath) { Remove-Item $WrapperPath -Force }
+    Write-Host "  ✓ Wrapper removed from $InstallDir" -ForegroundColor Green
+    Write-Host '    Claude Code itself is unchanged — run ''claude'' to use it directly.'
+}
+
+# ── Epic Lookup ──────────────────────────────────────────────────────
+
+# @desc Look up an epic by number. Searches epic files and my-epics.md. Accepts "8894" or "sc-8894".
+# @arg id string The epic/story ID (e.g. "8894" or "sc-8894")
+# @shell python3
+epic_search(id: str) {
+    import os, re, sys
+
+    epics_dir = os.environ.get("SENDIENT_EPICS_DIR")
+    if not epics_dir:
+        print("✗ SENDIENT_EPICS_DIR not set", file=sys.stderr)
+        sys.exit(1)
+    epics_file = os.environ.get("SENDIENT_EPICS_FILE")
+    if not epics_file:
+        print("✗ SENDIENT_EPICS_FILE not set", file=sys.stderr)
+        sys.exit(1)
+
+    # Normalise: strip "sc-" prefix if present
+    num = re.sub(r'^sc-', '', id, flags=re.IGNORECASE)
+
+    found = False
+
+    # 1. Check epic file
+    epic_path = os.path.join(epics_dir, f"epic-{num}.md")
+    if os.path.isfile(epic_path):
+        print(f"── Epic file: {epic_path} ──\n")
+        with open(epic_path) as f:
+            print(f.read())
+        found = True
+    else:
+        print(f"No epic file found at {epic_path}")
+
+    # 2. Check my-epics.md
+    print(f"\n── my-epics.md ──")
+    if os.path.isfile(epics_file):
+        with open(epics_file) as f:
+            lines = f.readlines()
+        matching = [l.rstrip() for l in lines if num in l]
+        if matching:
+            for line in matching:
+                print(f"  {line}")
+            found = True
+        else:
+            print(f"  {num} not listed in my-epics.md")
+    else:
+        print(f"  File not found: {epics_file}")
+
+    if not found:
+        sys.exit(1)
+}
+# ── END company_claude ────────────────────────────────────────────────
