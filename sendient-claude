@@ -60,7 +60,7 @@ if $show_banner; then
 
   printf '\n'
   printf '%s╭─────────────────────────────────────────────────╮%s\n' "$DIM" "$RESET"
-  printf '%s│%s  %sSendient AI — SREE Methodology%s                 %s│%s\n' "$DIM" "$RESET" "${BOLD}${CYAN}" "$RESET" "$DIM" "$RESET"
+  printf '%s│%s  %sSendient AI — SREE Framework%s                   %s│%s\n' "$DIM" "$RESET" "${BOLD}${CYAN}" "$RESET" "$DIM" "$RESET"
   printf '%s│%s                                                 %s│%s\n' "$DIM" "$RESET" "$DIM" "$RESET"
   printf '%s│%s  %s/scope%s    → Define what you want to achieve    %s│%s\n' "$DIM" "$RESET" "${BOLD}${YELLOW}" "$RESET" "$DIM" "$RESET"
   printf '%s│%s  %s/refine%s   → Clarify requirements & constraints %s│%s\n' "$DIM" "$RESET" "${BOLD}${YELLOW}" "$RESET" "$DIM" "$RESET"
