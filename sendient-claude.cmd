@@ -75,7 +75,7 @@ set "BY=%BOLD%%YELLOW%"
 
 echo.
 echo %DIM%+---------------------------------------------------+%RESET%
-echo %DIM%^|%RESET%  %BC%Sendient AI - SREE Methodology%RESET%                 %DIM%^|%RESET%
+echo %DIM%^|%RESET%  %BC%Sendient AI - SREE Framework%RESET%                   %DIM%^|%RESET%
 echo %DIM%^|%RESET%                                                 %DIM%^|%RESET%
 echo %DIM%^|%RESET%  %BY%/scope%RESET%    - Define what you want to achieve    %DIM%^|%RESET%
 echo %DIM%^|%RESET%  %BY%/refine%RESET%   - Clarify requirements ^& constraints %DIM%^|%RESET%
