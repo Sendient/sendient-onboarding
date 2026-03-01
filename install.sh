@@ -30,7 +30,7 @@ WRAPPER_NAME="claude"
 # unset to fall back to SENDIENT_REPO_URL + GITHUB_TOKEN.
 REPO_RAW_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/company-claude/main}"
 URL_WRAPPER="${SENDIENT_URL_WRAPPER:-https://gist.githubusercontent.com/MichaelJarvisSendient/63c13dab54a26595d05e9f041a943679/raw/sendient-claude}"
-URL_BANNER="${SENDIENT_URL_BANNER:-https://gist.githubusercontent.com/MichaelJarvisSendient/PLACEHOLDER_BANNER_GIST_ID/raw/banner.py}"
+URL_BANNER="${SENDIENT_URL_BANNER:-https://gist.githubusercontent.com/MichaelJarvisSendient/4bc5d8f5f8dc06bafbfa2857f1fd7fd5/raw/banner.py}"
 URL_RUNFILE="${SENDIENT_URL_RUNFILE:-https://gist.githubusercontent.com/MichaelJarvisSendient/a7f2ebc6d337391d102e5c2febce1200/raw/Runfile}"
 
 # Auth for private repo — only needed when fetching from raw.githubusercontent.com
