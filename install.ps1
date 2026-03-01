@@ -11,6 +11,7 @@
 #   6. Auto-allows runtool + Playwright MCP tools in ~/.claude/settings.json
 #   7. Installs Runfile tasks (company_claude:*) to ~/.runfile
 #   8. Clones SREE repo and runs global install (skip with -NoSree)
+#  8b. Installs SREE Runfile tasks (sree:*) to ~/.runfile
 
 # Parse flags
 param(
@@ -369,7 +370,56 @@ if ($NoSree) {
     }
 }
 
-# ── Step 8: Verify ───────────────────────────────────────────────────
+# ── Step 8b: Install SREE Runfile tasks to ~/.runfile ─────────────────
+
+$SreeBegin = '# ── BEGIN sree ──'
+$SreeEnd = '# ── END sree ──'
+$SreeRunfile = Join-Path $SreeCache 'Runfile'
+
+if ($NoSree) {
+    Write-Info 'Skipping SREE Runfile tasks (-NoSree)'
+} elseif (-not (Test-Path $SreeRunfile)) {
+    Write-Warn "SREE Runfile not found at $SreeRunfile — skipping task install"
+} else {
+    $sreeLines = Get-Content $SreeRunfile
+    $inBlock = $false
+    $sreeBlockLines = @()
+    foreach ($line in $sreeLines) {
+        if ($line -match [regex]::Escape($SreeBegin)) { $inBlock = $true }
+        if ($inBlock) { $sreeBlockLines += $line }
+        if ($line -match [regex]::Escape($SreeEnd)) { $inBlock = $false }
+    }
+
+    if ($sreeBlockLines.Count -eq 0) {
+        Write-Warn 'Could not extract sree block from SREE Runfile — skipping'
+    } elseif (-not (Test-Path $GlobalRunfile)) {
+        $sreeBlockLines | Set-Content $GlobalRunfile -Encoding UTF8
+        Write-Ok "SREE Runfile tasks installed to $GlobalRunfile"
+    } elseif ((Get-Content $GlobalRunfile -Raw) -match [regex]::Escape($SreeBegin)) {
+        # Replace existing block
+        $existingLines = Get-Content $GlobalRunfile
+        $newLines = @()
+        $skipBlock = $false
+        $replaced = $false
+        foreach ($line in $existingLines) {
+            if ($line -match [regex]::Escape($SreeBegin)) {
+                $newLines += $sreeBlockLines
+                $skipBlock = $true
+                $replaced = $true
+            }
+            if (-not $skipBlock) { $newLines += $line }
+            if ($skipBlock -and ($line -match [regex]::Escape($SreeEnd))) { $skipBlock = $false }
+        }
+        $newLines | Set-Content $GlobalRunfile -Encoding UTF8
+        Write-Ok "SREE Runfile tasks updated in $GlobalRunfile"
+    } else {
+        # Append
+        Add-Content $GlobalRunfile -Value "`n$($sreeBlockLines -join "`n")" -Encoding UTF8
+        Write-Ok "SREE Runfile tasks appended to $GlobalRunfile"
+    }
+}
+
+# ── Step 9: Verify ───────────────────────────────────────────────────
 
 Write-Host ''
 $resolvedClaude = Get-Command claude -ErrorAction SilentlyContinue

@@ -12,6 +12,7 @@
 #   5. Auto-allows runtool + Playwright MCP tools in ~/.claude/settings.json
 #   6. Installs Runfile tasks (company_claude:*) to ~/.runfile
 #   7. Clones SREE repo and runs global install (skip with --no-sree)
+#  7b. Installs SREE Runfile tasks (sree:*) to ~/.runfile
 
 set -euo pipefail
 
@@ -294,6 +295,41 @@ else
     ok "SREE global install complete"
   elif [ -d "$SREE_CACHE/.git" ]; then
     warn "SREE install script not found at $SREE_CACHE/scripts/install-sree.sh"
+  fi
+fi
+
+# ── Step 7b: Install SREE Runfile tasks to ~/.runfile ─────────────────
+
+SREE_BEGIN="# ── BEGIN sree ──"
+SREE_END="# ── END sree ──"
+SREE_RUNFILE="${SREE_CACHE:-$HOME/.sendient/sree}/Runfile"
+
+if $NO_SREE; then
+  info "Skipping SREE Runfile tasks (--no-sree)"
+elif [ ! -f "$SREE_RUNFILE" ]; then
+  warn "SREE Runfile not found at $SREE_RUNFILE — skipping task install"
+else
+  SREE_BLOCK=$(sed -n "/^${SREE_BEGIN}/,/^${SREE_END}/p" "$SREE_RUNFILE")
+
+  if [ -z "${SREE_BLOCK:-}" ]; then
+    warn "Could not extract sree block from $SREE_RUNFILE — skipping"
+  elif [ ! -f "$GLOBAL_RUNFILE" ]; then
+    printf '%s\n' "$SREE_BLOCK" > "$GLOBAL_RUNFILE"
+    ok "SREE Runfile tasks installed to $GLOBAL_RUNFILE"
+  elif grep -qF "$SREE_BEGIN" "$GLOBAL_RUNFILE"; then
+    # Replace existing block
+    block_file=$(mktemp)
+    printf '%s\n' "$SREE_BLOCK" > "$block_file"
+    tmpfile=$(mktemp)
+    sed -e "/^${SREE_BEGIN}/,/^${SREE_END}/{ /^${SREE_BEGIN}/{
+      r $block_file
+    }; d; }" "$GLOBAL_RUNFILE" > "$tmpfile" && mv "$tmpfile" "$GLOBAL_RUNFILE"
+    rm -f "$block_file"
+    ok "SREE Runfile tasks updated in $GLOBAL_RUNFILE"
+  else
+    # Append
+    printf '\n%s\n' "$SREE_BLOCK" >> "$GLOBAL_RUNFILE"
+    ok "SREE Runfile tasks appended to $GLOBAL_RUNFILE"
   fi
 fi
 
