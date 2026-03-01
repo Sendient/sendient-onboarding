@@ -8,9 +8,10 @@
 #   2. Checks for (or installs) the `run` task runner
 #   3. Installs the sendient-claude wrapper as "claude" in ~/.sendient/bin
 #      (a dedicated directory that takes PATH priority over the real claude)
-#   4. Configures MCP runtool server in ~/.claude.json
-#   5. Installs Runfile tasks (company_claude:*) to ~/.runfile
-#   6. Clones SREE repo and runs global install (skip with --no-sree)
+#   4. Configures MCP runtool + Playwright servers in ~/.claude.json
+#   5. Auto-allows runtool + Playwright MCP tools in ~/.claude/settings.json
+#   6. Installs Runfile tasks (company_claude:*) to ~/.runfile
+#   7. Clones SREE repo and runs global install (skip with --no-sree)
 
 set -euo pipefail
 
@@ -165,10 +166,47 @@ if [ -f "$CLAUDE_JSON" ] && command -v jq >/dev/null 2>&1; then
     jq '.mcpServers.runtool = {"command": "run", "args": ["--serve-mcp"]}' "$CLAUDE_JSON" > "$tmpfile" && mv "$tmpfile" "$CLAUDE_JSON"
     ok "runtool MCP server added to ~/.claude.json"
   fi
+  # Playwright MCP
+  if jq -e '.mcpServers.playwright' "$CLAUDE_JSON" >/dev/null 2>&1; then
+    ok "playwright MCP server already configured"
+  else
+    tmpfile=$(mktemp)
+    jq '.mcpServers.playwright = {"type": "http", "url": "http://localhost:8931/mcp"}' "$CLAUDE_JSON" > "$tmpfile" && mv "$tmpfile" "$CLAUDE_JSON"
+    ok "playwright MCP server added to ~/.claude.json"
+  fi
 elif [ ! -f "$CLAUDE_JSON" ]; then
   warn "~/.claude.json not found — skipping MCP config (will be created on first claude run)"
 else
-  warn "jq not found — skipping MCP config. Add runtool manually."
+  warn "jq not found — skipping MCP config. Add runtool/playwright manually."
+fi
+
+# ── Step 5b: Configure global settings permissions ───────────────────
+
+SETTINGS_JSON="$HOME/.claude/settings.json"
+MCP_PERMS=("mcp__runtool__*" "mcp__playwright__*")
+
+if [ -f "$SETTINGS_JSON" ] && command -v jq >/dev/null 2>&1; then
+  for perm in "${MCP_PERMS[@]}"; do
+    if jq -e --arg p "$perm" '.permissions.allow | index($p)' "$SETTINGS_JSON" >/dev/null 2>&1; then
+      ok "$perm already in allow list"
+    else
+      tmpfile=$(mktemp)
+      jq --arg p "$perm" '.permissions.allow += [$p]' "$SETTINGS_JSON" > "$tmpfile" && mv "$tmpfile" "$SETTINGS_JSON"
+      ok "$perm added to ~/.claude/settings.json"
+    fi
+  done
+elif [ ! -f "$SETTINGS_JSON" ]; then
+  mkdir -p "$(dirname "$SETTINGS_JSON")"
+  cat > "$SETTINGS_JSON" <<SETTINGSEOF
+{
+  "permissions": {
+    "allow": ["mcp__runtool__*", "mcp__playwright__*"]
+  }
+}
+SETTINGSEOF
+  ok "Created ~/.claude/settings.json with MCP permissions"
+else
+  warn "jq not found — skipping settings config"
 fi
 
 # ── Step 6: Install Runfile tasks to ~/.runfile ──────────────────────
@@ -210,7 +248,7 @@ else
   ok "Runfile tasks appended to $GLOBAL_RUNFILE"
 fi
 
-# ── Step 7: Install SREE framework (global) ────────────────────────
+# ── Step 7: Install SREE framework (global) ──────────────────────────
 
 SREE_CACHE="$HOME/.sendient/sree"
 SREE_REPO="git@github.com:Sendient/sree.git"
@@ -240,7 +278,7 @@ else
   fi
 fi
 
-# ── Step 8: Verify ──────────────────────────────────────────────────
+# ── Step 8: Verify ────────────────────────────────────────────────────
 
 printf '\n'
 RESOLVED="$(command -v claude 2>/dev/null || true)"

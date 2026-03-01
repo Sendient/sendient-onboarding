@@ -6,10 +6,11 @@
 #   1. Checks for (or installs) Claude Code
 #   2. Checks for (or installs) the `run` task runner
 #   3. Installs the sendient-claude wrapper as "claude.cmd" in ~/.sendient/bin
-#   4. Configures MCP runtool server in ~/.claude.json
+#   4. Configures MCP runtool + Playwright servers in ~/.claude.json
 #   5. Adds ~/.sendient/bin to User PATH (persistent)
-#   6. Installs Runfile tasks (company_claude:*) to ~/.runfile
-#   7. Clones SREE repo and runs global install (skip with -NoSree)
+#   6. Auto-allows runtool + Playwright MCP tools in ~/.claude/settings.json
+#   7. Installs Runfile tasks (company_claude:*) to ~/.runfile
+#   8. Clones SREE repo and runs global install (skip with -NoSree)
 
 # Parse flags
 param(
@@ -176,11 +177,69 @@ if (Test-Path $claudeJson) {
             $config | ConvertTo-Json -Depth 10 | Set-Content $claudeJson -Encoding UTF8
             Write-Ok 'runtool MCP server added to ~/.claude.json'
         }
+        # Playwright MCP
+        if ($config.mcpServers.PSObject.Properties.Name -contains 'playwright') {
+            Write-Ok 'playwright MCP server already configured'
+        } else {
+            $playwrightConfig = [PSCustomObject]@{
+                type = 'http'
+                url  = 'http://localhost:8931/mcp'
+            }
+            $config.mcpServers | Add-Member -NotePropertyName 'playwright' -NotePropertyValue $playwrightConfig
+            $config | ConvertTo-Json -Depth 10 | Set-Content $claudeJson -Encoding UTF8
+            Write-Ok 'playwright MCP server added to ~/.claude.json'
+        }
     } catch {
         Write-Warn "Could not parse ~/.claude.json — skipping MCP config. Error: $_"
     }
 } else {
     Write-Warn '~/.claude.json not found — skipping MCP config (will be created on first claude run)'
+}
+
+# ── Step 5b: Configure global settings permissions ───────────────────
+
+$settingsJson = Join-Path $env:USERPROFILE '.claude\settings.json'
+$mcpPerms = @('mcp__runtool__*', 'mcp__playwright__*')
+
+if (Test-Path $settingsJson) {
+    try {
+        $settings = Get-Content $settingsJson -Raw | ConvertFrom-Json
+
+        # Ensure permissions.allow exists
+        if (-not ($settings.PSObject.Properties.Name -contains 'permissions')) {
+            $settings | Add-Member -NotePropertyName 'permissions' -NotePropertyValue ([PSCustomObject]@{ allow = @() })
+        } elseif (-not ($settings.permissions.PSObject.Properties.Name -contains 'allow')) {
+            $settings.permissions | Add-Member -NotePropertyName 'allow' -NotePropertyValue @()
+        }
+
+        $changed = $false
+        foreach ($perm in $mcpPerms) {
+            if ($settings.permissions.allow -contains $perm) {
+                Write-Ok "$perm already in allow list"
+            } else {
+                $settings.permissions.allow = @($settings.permissions.allow) + $perm
+                Write-Ok "$perm added to ~/.claude/settings.json"
+                $changed = $true
+            }
+        }
+        if ($changed) {
+            $settings | ConvertTo-Json -Depth 10 | Set-Content $settingsJson -Encoding UTF8
+        }
+    } catch {
+        Write-Warn "Could not parse ~/.claude/settings.json — skipping. Error: $_"
+    }
+} else {
+    $settingsDir = Split-Path $settingsJson
+    if (-not (Test-Path $settingsDir)) {
+        New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
+    }
+    $newSettings = [PSCustomObject]@{
+        permissions = [PSCustomObject]@{
+            allow = $mcpPerms
+        }
+    }
+    $newSettings | ConvertTo-Json -Depth 10 | Set-Content $settingsJson -Encoding UTF8
+    Write-Ok 'Created ~/.claude/settings.json with MCP permissions'
 }
 
 # ── Step 6: Install Runfile tasks to ~/.runfile ──────────────────────
