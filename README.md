@@ -32,6 +32,9 @@ The installer checks for (or installs) Claude Code and `run`, then:
 2. Prepends `~/.sendient/bin` to your PATH
 3. Configures the `runtool` MCP server in `~/.claude.json`
 4. Installs Runfile tasks to `~/.runfile`
+5. Clones the SREE repo and runs `install-sree.sh global` — installs skills, agents, workflows, engine, and base to `~/.claude/`
+
+> **Note:** The SREE step requires `git` with SSH access to `github.com/Sendient/Sendient`. Pass `--no-sree` (bash) or `-NoSree` (PowerShell) to skip it.
 
 ## What you get
 

@@ -10,8 +10,17 @@
 #      (a dedicated directory that takes PATH priority over the real claude)
 #   4. Configures MCP runtool server in ~/.claude.json
 #   5. Installs Runfile tasks (company_claude:*) to ~/.runfile
+#   6. Clones SREE repo and runs global install (skip with --no-sree)
 
 set -euo pipefail
+
+# Parse flags
+NO_SREE=false
+for arg in "$@"; do
+  case "$arg" in
+    --no-sree) NO_SREE=true ;;
+  esac
+done
 
 INSTALL_DIR="${SENDIENT_INSTALL_DIR:-$HOME/.sendient/bin}"
 WRAPPER_NAME="claude"
@@ -201,7 +210,39 @@ else
   ok "Runfile tasks appended to $GLOBAL_RUNFILE"
 fi
 
-# ── Step 7: Verify ──────────────────────────────────────────────────
+# ── Step 7: Install SREE framework (global) ────────────────────────
+
+SREE_CACHE="$HOME/.sendient/sree"
+SREE_REPO="git@github.com:Sendient/Sendient.git"
+SREE_SUBDIR="sree"
+
+if $NO_SREE; then
+  info "Skipping SREE install (--no-sree)"
+elif ! command -v git >/dev/null 2>&1; then
+  warn "git not found — skipping SREE install"
+else
+  info "Installing SREE framework..."
+  if [ -d "$SREE_CACHE/.git" ]; then
+    git -C "$SREE_CACHE" pull --ff-only 2>/dev/null && ok "SREE repo updated" || warn "SREE pull failed — using cached version"
+  else
+    mkdir -p "$(dirname "$SREE_CACHE")"
+    if git clone --depth 1 --filter=blob:none --sparse "$SREE_REPO" "$SREE_CACHE" 2>/dev/null; then
+      git -C "$SREE_CACHE" sparse-checkout set "$SREE_SUBDIR"
+      ok "SREE repo cloned (sparse checkout)"
+    else
+      warn "Could not clone SREE repo — skipping (check SSH key / git access)"
+    fi
+  fi
+
+  if [ -f "$SREE_CACHE/$SREE_SUBDIR/scripts/install-sree.sh" ]; then
+    bash "$SREE_CACHE/$SREE_SUBDIR/scripts/install-sree.sh" global
+    ok "SREE global install complete"
+  elif [ -d "$SREE_CACHE/.git" ]; then
+    warn "SREE install script not found at $SREE_CACHE/$SREE_SUBDIR/scripts/install-sree.sh"
+  fi
+fi
+
+# ── Step 8: Verify ──────────────────────────────────────────────────
 
 printf '\n'
 RESOLVED="$(command -v claude 2>/dev/null || true)"

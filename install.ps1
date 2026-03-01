@@ -9,6 +9,12 @@
 #   4. Configures MCP runtool server in ~/.claude.json
 #   5. Adds ~/.sendient/bin to User PATH (persistent)
 #   6. Installs Runfile tasks (company_claude:*) to ~/.runfile
+#   7. Clones SREE repo and runs global install (skip with -NoSree)
+
+# Parse flags
+param(
+    [switch]$NoSree
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -235,7 +241,56 @@ if (-not $OurBlock) {
     }
 }
 
-# ── Step 7: Verify ───────────────────────────────────────────────────
+# ── Step 7: Install SREE framework (global) ──────────────────────────
+
+$SreeCache = Join-Path $env:USERPROFILE '.sendient\sree'
+$SreeRepo = 'git@github.com:Sendient/Sendient.git'
+$SreeSubdir = 'sree'
+
+if ($NoSree) {
+    Write-Info 'Skipping SREE install (-NoSree)'
+} elseif (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Warn 'git not found — skipping SREE install'
+} else {
+    Write-Info 'Installing SREE framework...'
+    $sreeGitDir = Join-Path $SreeCache '.git'
+
+    if (Test-Path $sreeGitDir) {
+        try {
+            & git -C $SreeCache pull --ff-only 2>$null
+            Write-Ok 'SREE repo updated'
+        } catch {
+            Write-Warn 'SREE pull failed — using cached version'
+        }
+    } else {
+        $sreeParent = Split-Path $SreeCache
+        if (-not (Test-Path $sreeParent)) {
+            New-Item -ItemType Directory -Path $sreeParent -Force | Out-Null
+        }
+        try {
+            & git clone --depth 1 --filter=blob:none --sparse $SreeRepo $SreeCache 2>$null
+            & git -C $SreeCache sparse-checkout set $SreeSubdir
+            Write-Ok 'SREE repo cloned (sparse checkout)'
+        } catch {
+            Write-Warn 'Could not clone SREE repo — skipping (check SSH key / git access)'
+        }
+    }
+
+    $sreeInstallScript = Join-Path $SreeCache "$SreeSubdir\scripts\install-sree.sh"
+    if (Test-Path $sreeInstallScript) {
+        $bashCmd = Get-Command bash -ErrorAction SilentlyContinue
+        if ($bashCmd) {
+            & bash $sreeInstallScript global
+            Write-Ok 'SREE global install complete'
+        } else {
+            Write-Warn 'bash not found — cannot run SREE install script. Install Git Bash or WSL.'
+        }
+    } elseif (Test-Path $sreeGitDir) {
+        Write-Warn "SREE install script not found at $sreeInstallScript"
+    }
+}
+
+# ── Step 8: Verify ───────────────────────────────────────────────────
 
 Write-Host ''
 $resolvedClaude = Get-Command claude -ErrorAction SilentlyContinue
