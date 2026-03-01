@@ -732,12 +732,71 @@ sree:import(yaml_path: str, project: str = "") {
         sort_order += 1
 
     conn.commit()
+
+    # ── Enrich stories with story_file and title from filesystem ──
+    story_location = data.get("story_location")
+    enriched_count = 0
+
+    if story_location:
+        # Resolve project root
+        try:
+            project_root = subprocess.check_output(
+                ["git", "rev-parse", "--show-toplevel"], stderr=subprocess.DEVNULL
+            ).decode().strip()
+        except Exception:
+            project_root = None
+
+        if project_root:
+            stories_dir = os.path.join(project_root, story_location)
+            if os.path.isdir(stories_dir):
+                # Get all story keys that lack story_file
+                rows = cur.execute(
+                    "SELECT id, story_key FROM stories WHERE project_id = ? AND story_file IS NULL",
+                    (pid,)
+                ).fetchall()
+
+                for row in rows:
+                    skey = row["story_key"]
+                    # Find files matching {story_key}*.md
+                    matches = [
+                        f for f in os.listdir(stories_dir)
+                        if f.startswith(skey) and f.endswith(".md")
+                    ]
+                    if not matches:
+                        continue
+
+                    match_file = matches[0]
+                    rel_path = os.path.join(story_location, match_file)
+
+                    # Extract title from first heading
+                    title = None
+                    full_path = os.path.join(stories_dir, match_file)
+                    try:
+                        with open(full_path) as sf:
+                            for line in sf:
+                                line = line.strip()
+                                if line.startswith("# "):
+                                    title = line[2:].strip()
+                                    break
+                    except Exception:
+                        pass
+
+                    cur.execute(
+                        """UPDATE stories SET story_file = ?, title = ?
+                           WHERE id = ?""",
+                        (rel_path, title, row["id"])
+                    )
+                    enriched_count += 1
+
+                conn.commit()
+
     conn.close()
     print(f"── Import complete ──")
-    print(f"  Project: {project}")
-    print(f"  Phases:  {phases_count}")
-    print(f"  Epics:   {epics_count}")
-    print(f"  Stories: {stories_count}")
+    print(f"  Project:  {project}")
+    print(f"  Phases:   {phases_count}")
+    print(f"  Epics:    {epics_count}")
+    print(f"  Stories:  {stories_count}")
+    print(f"  Enriched: {enriched_count} (story_file + title from {data.get('story_location', 'N/A')})")
 }
 
 # @desc Sync tracking DB with Shortcut (opt-in per project). Stub for future implementation.
