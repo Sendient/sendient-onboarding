@@ -61,30 +61,15 @@ if not defined REAL_CLAUDE (
 rem --- Show banner for interactive sessions ---
 if "%SHOW_BANNER%"=="0" goto :launch
 
-rem ANSI escape character (0x1B)
-for /f %%e in ('echo prompt $E ^| cmd') do set "ESC=%%e"
-
-set "DIM=%ESC%[2m"
-set "BOLD=%ESC%[1m"
-set "CYAN=%ESC%[36m"
-set "WHITE=%ESC%[37m"
-set "YELLOW=%ESC%[33m"
-set "RESET=%ESC%[0m"
-set "BC=%BOLD%%CYAN%"
-set "BY=%BOLD%%YELLOW%"
-
-echo.
-echo %DIM%+---------------------------------------------------+%RESET%
-echo %DIM%^|%RESET%  %BC%Sendient AI - SREE Framework%RESET%                   %DIM%^|%RESET%
-echo %DIM%^|%RESET%                                                 %DIM%^|%RESET%
-echo %DIM%^|%RESET%  %BY%/scope%RESET%    - Define what you want to achieve    %DIM%^|%RESET%
-echo %DIM%^|%RESET%  %BY%/refine%RESET%   - Clarify requirements ^& constraints %DIM%^|%RESET%
-echo %DIM%^|%RESET%  %BY%/execute%RESET%  - Implement the solution             %DIM%^|%RESET%
-echo %DIM%^|%RESET%  %BY%/evaluate%RESET% - Review, confirm, document, merge   %DIM%^|%RESET%
-echo %DIM%^|%RESET%                                                 %DIM%^|%RESET%
-echo %DIM%^|%RESET%  %DIM%Start any session with %WHITE%/scope%DIM%, or pick up%RESET%      %DIM%^|%RESET%
-echo %DIM%^|%RESET%  %DIM%where you left off with %WHITE%/refine%DIM%, or %WHITE%/execute%DIM%.%RESET%  %DIM%^|%RESET%
-echo %DIM%+---------------------------------------------------+%RESET%
+rem Try python3 first, then python; skip banner if neither available
+where python3 >nul 2>&1 && (
+    python3 "%~dp0banner.py" 2>nul
+    goto :launch
+)
+where python >nul 2>&1 && (
+    python "%~dp0banner.py" 2>nul
+    goto :launch
+)
 
 :launch
 rem Pass REAL_CLAUDE across the endlocal boundary

@@ -46,30 +46,17 @@ for arg in "$@"; do
 done
 
 if $show_banner; then
-  # Colours (gracefully degrade if tput unavailable)
-  if command -v tput >/dev/null 2>&1 && [ "${TERM:-dumb}" != "dumb" ]; then
-    BOLD="$(tput bold)"
-    DIM="$(tput dim)"
-    CYAN="$(tput setaf 6)"
-    WHITE="$(tput setaf 7)"
-    YELLOW="$(tput setaf 3)"
-    RESET="$(tput sgr0)"
-  else
-    BOLD="" DIM="" CYAN="" WHITE="" YELLOW="" RESET=""
+  # Try python3 first, then python, skip banner if neither available
+  PYTHON=""
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON=python3
+  elif command -v python >/dev/null 2>&1; then
+    PYTHON=python
   fi
 
-  printf '\n'
-  printf '%s╭─────────────────────────────────────────────────╮%s\n' "$DIM" "$RESET"
-  printf '%s│%s  %sSendient AI — SREE Framework%s                   %s│%s\n' "$DIM" "$RESET" "${BOLD}${CYAN}" "$RESET" "$DIM" "$RESET"
-  printf '%s│%s                                                 %s│%s\n' "$DIM" "$RESET" "$DIM" "$RESET"
-  printf '%s│%s  %s/scope%s    → Define what you want to achieve    %s│%s\n' "$DIM" "$RESET" "${BOLD}${YELLOW}" "$RESET" "$DIM" "$RESET"
-  printf '%s│%s  %s/refine%s   → Clarify requirements & constraints %s│%s\n' "$DIM" "$RESET" "${BOLD}${YELLOW}" "$RESET" "$DIM" "$RESET"
-  printf '%s│%s  %s/execute%s  → Implement the solution             %s│%s\n' "$DIM" "$RESET" "${BOLD}${YELLOW}" "$RESET" "$DIM" "$RESET"
-  printf '%s│%s  %s/evaluate%s → Review, confirm, document, merge   %s│%s\n' "$DIM" "$RESET" "${BOLD}${YELLOW}" "$RESET" "$DIM" "$RESET"
-  printf '%s│%s                                                 %s│%s\n' "$DIM" "$RESET" "$DIM" "$RESET"
-  printf '%s│%s  %sStart any session with %s/scope%s, or pick up%s      %s│%s\n' "$DIM" "$RESET" "$DIM" "${WHITE}" "$DIM" "$RESET" "$DIM" "$RESET"
-  printf '%s│%s  %swhere you left off with %s/refine%s, or %s/execute%s.%s  %s│%s\n' "$DIM" "$RESET" "$DIM" "${WHITE}" "$DIM" "${WHITE}" "$DIM" "$RESET" "$DIM" "$RESET"
-  printf '%s╰─────────────────────────────────────────────────╯%s\n' "$DIM" "$RESET"
+  if [ -n "$PYTHON" ]; then
+    "$PYTHON" "$SELF_DIR/banner.py" 2>/dev/null || true
+  fi
 fi
 
 # --- Hand off to the real claude ---

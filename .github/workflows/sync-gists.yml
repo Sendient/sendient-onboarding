@@ -8,6 +8,7 @@ on:
       - install.ps1
       - sendient-claude
       - sendient-claude.cmd
+      - banner.py
       - Runfile
 
   workflow_dispatch:
@@ -26,6 +27,8 @@ jobs:
             var: GIST_URL_SENDIENT_CLAUDE
           - file: sendient-claude.cmd
             var: GIST_URL_SENDIENT_CLAUDE_CMD
+          - file: banner.py
+            var: GIST_URL_BANNER_PY
           - file: Runfile
             var: GIST_URL_RUNFILE
     steps:

@@ -30,6 +30,7 @@ WRAPPER_NAME="claude"
 # unset to fall back to SENDIENT_REPO_URL + GITHUB_TOKEN.
 REPO_RAW_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/company-claude/main}"
 URL_WRAPPER="${SENDIENT_URL_WRAPPER:-https://gist.githubusercontent.com/MichaelJarvisSendient/63c13dab54a26595d05e9f041a943679/raw/sendient-claude}"
+URL_BANNER="${SENDIENT_URL_BANNER:-https://gist.githubusercontent.com/MichaelJarvisSendient/PLACEHOLDER_BANNER_GIST_ID/raw/banner.py}"
 URL_RUNFILE="${SENDIENT_URL_RUNFILE:-https://gist.githubusercontent.com/MichaelJarvisSendient/a7f2ebc6d337391d102e5c2febce1200/raw/Runfile}"
 
 # Auth for private repo — only needed when fetching from raw.githubusercontent.com
@@ -48,10 +49,10 @@ else
   LOCAL_MODE=false
 fi
 
-info()  { printf '  \033[1;36m→\033[0m %s\n' "$*"; }
-ok()    { printf '  \033[1;32m✓\033[0m %s\n' "$*"; }
-warn()  { printf '  \033[1;33m!\033[0m %s\n' "$*"; }
-fail()  { printf '  \033[1;31m✗\033[0m %s\n' "$*" >&2; exit 1; }
+info()  { printf '\033[1;36mℹ\033[0m  %s\n' "$*"; }
+ok()    { printf '\033[1;32m✓\033[0m  %s\n' "$*"; }
+warn()  { printf '\033[1;33m⚠\033[0m  %s\n' "$*"; }
+fail()  { printf '\033[1;31m✗\033[0m  %s\n' "$*" >&2; exit 1; }
 
 # ── Step 0: Pre-flight ──────────────────────────────────────────────
 
@@ -130,12 +131,15 @@ info "Installing wrapper to $WRAPPER_PATH"
 
 if $LOCAL_MODE; then
   cp "$SCRIPT_DIR/sendient-claude" "$WRAPPER_PATH"
+  cp "$SCRIPT_DIR/banner.py" "$INSTALL_DIR/banner.py"
   ok "Wrapper installed (from local repo)"
 else
   if command -v curl >/dev/null 2>&1; then
     curl -fsSL "${CURL_AUTH[@]}" "$URL_WRAPPER" -o "$WRAPPER_PATH"
+    curl -fsSL "${CURL_AUTH[@]}" "$URL_BANNER" -o "$INSTALL_DIR/banner.py"
   elif command -v wget >/dev/null 2>&1; then
     wget -qO "$WRAPPER_PATH" "${WGET_AUTH[@]}" "$URL_WRAPPER"
+    wget -qO "$INSTALL_DIR/banner.py" "${WGET_AUTH[@]}" "$URL_BANNER"
   else
     fail "Neither curl nor wget found."
   fi

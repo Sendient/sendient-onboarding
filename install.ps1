@@ -25,6 +25,7 @@ $WrapperName = 'claude.cmd'
 # File URLs — set these to gist raw URLs for no-auth installs
 $RepoRawUrl = if ($env:SENDIENT_REPO_URL) { $env:SENDIENT_REPO_URL } else { 'https://raw.githubusercontent.com/Sendient/company-claude/main' }
 $UrlWrapper = if ($env:SENDIENT_URL_WRAPPER) { $env:SENDIENT_URL_WRAPPER } else { 'https://gist.githubusercontent.com/MichaelJarvisSendient/d07007a35bfd873c07790467fbedeca5/raw/sendient-claude.cmd' }
+$UrlBanner = if ($env:SENDIENT_URL_BANNER) { $env:SENDIENT_URL_BANNER } else { 'https://gist.githubusercontent.com/MichaelJarvisSendient/PLACEHOLDER_BANNER_GIST_ID/raw/banner.py' }
 $UrlRunfile = if ($env:SENDIENT_URL_RUNFILE) { $env:SENDIENT_URL_RUNFILE } else { 'https://gist.githubusercontent.com/MichaelJarvisSendient/a7f2ebc6d337391d102e5c2febce1200/raw/Runfile' }
 
 # Auth headers for private repo — only needed when fetching from raw.githubusercontent.com
@@ -40,10 +41,10 @@ $LocalMode = Test-Path $LocalWrapper
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
-function Write-Info  { param([string]$Msg) Write-Host "  → $Msg" -ForegroundColor Cyan }
-function Write-Ok    { param([string]$Msg) Write-Host "  ✓ $Msg" -ForegroundColor Green }
-function Write-Warn  { param([string]$Msg) Write-Host "  ! $Msg" -ForegroundColor Yellow }
-function Write-Fail  { param([string]$Msg) Write-Host "  ✗ $Msg" -ForegroundColor Red; exit 1 }
+function Write-Info  { param([string]$Msg) Write-Host "ℹ  $Msg" -ForegroundColor Cyan }
+function Write-Ok    { param([string]$Msg) Write-Host "✓  $Msg" -ForegroundColor Green }
+function Write-Warn  { param([string]$Msg) Write-Host "⚠  $Msg" -ForegroundColor Yellow }
+function Write-Fail  { param([string]$Msg) Write-Host "✗  $Msg" -ForegroundColor Red; exit 1 }
 
 # ── Step 0: Pre-flight ───────────────────────────────────────────────
 
@@ -148,10 +149,12 @@ Write-Info "Installing wrapper to $WrapperPath"
 
 if ($LocalMode) {
     Copy-Item $LocalWrapper $WrapperPath -Force
+    Copy-Item (Join-Path $ScriptDir 'banner.py') (Join-Path $InstallDir 'banner.py') -Force
     Write-Ok 'Wrapper installed (from local repo)'
 } else {
     try {
         Invoke-WebRequest -Uri $UrlWrapper -OutFile $WrapperPath -UseBasicParsing -Headers $AuthHeaders
+        Invoke-WebRequest -Uri $UrlBanner -OutFile (Join-Path $InstallDir 'banner.py') -UseBasicParsing -Headers $AuthHeaders
         Write-Ok 'Wrapper installed (downloaded)'
     } catch {
         Write-Fail "Failed to download wrapper from $UrlWrapper"
