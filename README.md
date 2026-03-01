@@ -47,10 +47,14 @@ The installer checks for (or installs) Claude Code and `run`, then:
 |------|-------------|
 | `company_claude:install` | Fetch and run the remote installer (works from anywhere) |
 | `company_claude:update` | Alias for `install` — re-runs the installer to update everything |
-| `company_claude:doctor` | Health check — verifies Claude Code, `run`, wrapper, MCP, and epics directory |
+| `company_claude:doctor` | Check installation health |
 | `company_claude:uninstall` | Remove the wrapper |
 | `sree:register` | Register the current repo as a SREE product config (auto-detects from git remote, or pass `--repo org/name`) |
-| `sree:update` | Pull latest SREE repo and re-run global install |
+| `sree:update` | Update SREE framework (pull latest and re-run global install) |
+| `sree:db` | Execute SQL against the SREE tracking database |
+| `sree:track` | Query SREE tracking (actions: `status`, `stories`, `resume`, `next`, `history`, `my-epics`) |
+| `sree:import` | Import `sprint-status.yaml` into SREE tracking DB (idempotent UPSERT) |
+| `sree:sync` | Sync tracking DB with Shortcut (opt-in per project; stub for future implementation) |
 | `epic_search <id>` | Look up a Shortcut epic by number (e.g. `run epic_search 8894`) |
 
 ## Distribution
