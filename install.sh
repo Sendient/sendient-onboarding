@@ -233,7 +233,7 @@ else
   fi
 
   if [ -f "$SREE_CACHE/scripts/install-sree.sh" ]; then
-    bash "$SREE_CACHE/scripts/install-sree.sh" global
+    echo y | bash "$SREE_CACHE/scripts/install-sree.sh" global
     ok "SREE global install complete"
   elif [ -d "$SREE_CACHE/.git" ]; then
     warn "SREE install script not found at $SREE_CACHE/scripts/install-sree.sh"

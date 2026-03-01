@@ -278,7 +278,7 @@ if ($NoSree) {
     if (Test-Path $sreeInstallScript) {
         $bashCmd = Get-Command bash -ErrorAction SilentlyContinue
         if ($bashCmd) {
-            & bash $sreeInstallScript global
+            'y' | & bash $sreeInstallScript global
             Write-Ok 'SREE global install complete'
         } else {
             Write-Warn 'bash not found — cannot run SREE install script. Install Git Bash or WSL.'
