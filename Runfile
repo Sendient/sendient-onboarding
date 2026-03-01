@@ -250,4 +250,61 @@ epic_search(id: str) {
     if not found:
         sys.exit(1)
 }
+# ── SREE ─────────────────────────────────────────────────────────────
+
+# @desc Register the current repo as a SREE product config. Auto-detects repo name from git remote, or pass --repo org/name.
+# @arg repo? string GitHub repo (org/name). Auto-detected from git remote if omitted.
+sree:register() {
+    SREE_CACHE="$HOME/.sendient/sree"
+    SREE_INSTALL="$SREE_CACHE/scripts/install-sree.sh"
+
+    if [ ! -f "$SREE_INSTALL" ]; then
+        echo "✗ SREE not installed. Run: run company_claude:install" >&2
+        exit 1
+    fi
+
+    # If .sree-config exists in cwd, just import it
+    if [ -f ".sree-config" ]; then
+        echo "── Found .sree-config in $(pwd) — importing ──"
+        bash "$SREE_INSTALL" global --import-config "$(pwd)"
+        exit 0
+    fi
+
+    # Determine repo name
+    REPO="${repo:-}"
+    if [ -z "$REPO" ]; then
+        REMOTE_URL="$(git remote get-url origin 2>/dev/null || true)"
+        if [ -n "$REMOTE_URL" ]; then
+            # Extract org/name from SSH or HTTPS URL
+            REPO="$(echo "$REMOTE_URL" | sed -E 's#.*[:/]([^/]+/[^/]+?)(\.git)?$#\1#')"
+        fi
+    fi
+
+    if [ -z "$REPO" ]; then
+        echo "✗ Could not detect repo. Pass --repo org/name or run from inside a git repo." >&2
+        exit 1
+    fi
+
+    REPO_NAME="$(basename "$REPO")"
+    echo "── Registering SREE config for $REPO ──"
+
+    # Non-interactive: set GITHUB_REPO so install-sree.sh skips prompts
+    export GITHUB_REPO="$REPO"
+    bash "$SREE_INSTALL" global --config "$REPO_NAME"
+}
+
+# @desc Update SREE framework (pull latest and re-run global install)
+sree:update() {
+    SREE_CACHE="$HOME/.sendient/sree"
+
+    if [ ! -d "$SREE_CACHE/.git" ]; then
+        echo "✗ SREE not installed. Run: run company_claude:install" >&2
+        exit 1
+    fi
+
+    echo "── Updating SREE ──"
+    git -C "$SREE_CACHE" pull --ff-only
+    bash "$SREE_CACHE/scripts/install-sree.sh" global
+}
+
 # ── END company_claude ────────────────────────────────────────────────

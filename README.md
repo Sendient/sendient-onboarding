@@ -48,6 +48,8 @@ The installer checks for (or installs) Claude Code and `run`, then:
 | `company_claude:update` | Alias for `install` — re-runs the installer to update everything |
 | `company_claude:doctor` | Health check — verifies Claude Code, `run`, wrapper, MCP, and epics directory |
 | `company_claude:uninstall` | Remove the wrapper |
+| `sree:register` | Register the current repo as a SREE product config (auto-detects from git remote, or pass `--repo org/name`) |
+| `sree:update` | Pull latest SREE repo and re-run global install |
 | `epic_search <id>` | Look up a Shortcut epic by number (e.g. `run epic_search 8894`) |
 
 ## Distribution
