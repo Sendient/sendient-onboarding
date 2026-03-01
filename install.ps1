@@ -3,7 +3,7 @@
 #    or: pwsh ./install.ps1              (from inside the repo)
 #
 # What this does:
-#   1. Checks for (or installs) Claude Code
+#   1. Checks for (or installs) Claude Code (native installer)
 #   2. Checks for (or installs) the `run` task runner
 #   3. Installs the sendient-claude wrapper as "claude.cmd" in ~/.sendient/bin
 #   4. Configures MCP runtool + Playwright servers in ~/.claude.json
@@ -62,16 +62,14 @@ if ($claudeCmd) {
     $claudeVersion = try { & claude --version 2>$null } catch { 'unknown' }
     Write-Ok "Claude Code found ($claudeVersion)"
 } else {
-    Write-Info 'Claude Code not found — installing via npm...'
-    $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
-    if ($npmCmd) {
-        & npm install -g @anthropic-ai/claude-code
-        if ($LASTEXITCODE -ne 0) { Write-Fail 'npm install failed' }
-        Write-Ok 'Claude Code installed'
-        # Refresh command cache
-        $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-    } else {
-        Write-Fail "npm not found. Install Node.js/npm first, or install Claude Code manually:`n     https://docs.anthropic.com/en/docs/claude-code"
+    Write-Info 'Claude Code not found — installing via native installer...'
+    try {
+        & ([scriptblock]::Create((Invoke-RestMethod https://claude.ai/install.ps1)))
+        # Ensure the newly installed binary is on PATH for the rest of this script
+        $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+        Write-Ok 'Claude Code installed (native)'
+    } catch {
+        Write-Fail "Native installer failed. Install Claude Code manually:`n     https://code.claude.com/docs/setup"
     }
 }
 

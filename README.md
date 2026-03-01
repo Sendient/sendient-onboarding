@@ -80,6 +80,6 @@ Files are published to secret gists via a GitHub Actions workflow on every push 
 
 ## Prerequisites
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (installer will attempt `npm install` if missing)
+- [Claude Code](https://code.claude.com/docs/setup) (installer will use the native installer if missing)
 - [`run`](https://github.com/nihilok/run) task runner (installer will attempt install if missing)
 - `jq` (for MCP config)

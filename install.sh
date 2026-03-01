@@ -4,7 +4,7 @@
 #    or: ./install.sh              (from inside the repo)
 #
 # What this does:
-#   1. Checks for (or installs) Claude Code
+#   1. Checks for (or installs) Claude Code (native installer)
 #   2. Checks for (or installs) the `run` task runner
 #   3. Installs the sendient-claude wrapper as "claude" in ~/.sendient/bin
 #      (a dedicated directory that takes PATH priority over the real claude)
@@ -67,12 +67,14 @@ if command -v claude >/dev/null 2>&1; then
   CLAUDE_VERSION="$(claude --version 2>/dev/null || echo "unknown")"
   ok "Claude Code found ($CLAUDE_VERSION)"
 else
-  info "Claude Code not found — installing via npm..."
-  if command -v npm >/dev/null 2>&1; then
-    npm install -g @anthropic-ai/claude-code
-    ok "Claude Code installed"
+  info "Claude Code not found — installing via native installer..."
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL https://claude.ai/install.sh | bash
+    # Ensure the newly installed binary is on PATH for the rest of this script
+    export PATH="$HOME/.local/bin:$PATH"
+    ok "Claude Code installed (native)"
   else
-    fail "npm not found. Install Node.js/npm first, or install Claude Code manually:\n     https://docs.anthropic.com/en/docs/claude-code"
+    fail "curl not found. Install Claude Code manually:\n     https://code.claude.com/docs/setup"
   fi
 fi
 
