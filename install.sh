@@ -213,8 +213,7 @@ fi
 # ── Step 7: Install SREE framework (global) ────────────────────────
 
 SREE_CACHE="$HOME/.sendient/sree"
-SREE_REPO="git@github.com:Sendient/Sendient.git"
-SREE_SUBDIR="sree"
+SREE_REPO="git@github.com:Sendient/sree.git"
 
 if $NO_SREE; then
   info "Skipping SREE install (--no-sree)"
@@ -226,19 +225,18 @@ else
     git -C "$SREE_CACHE" pull --ff-only 2>/dev/null && ok "SREE repo updated" || warn "SREE pull failed — using cached version"
   else
     mkdir -p "$(dirname "$SREE_CACHE")"
-    if git clone --depth 1 --filter=blob:none --sparse "$SREE_REPO" "$SREE_CACHE" 2>/dev/null; then
-      git -C "$SREE_CACHE" sparse-checkout set --skip-checks "$SREE_SUBDIR"
-      ok "SREE repo cloned (sparse checkout)"
+    if git clone --depth 1 "$SREE_REPO" "$SREE_CACHE" 2>/dev/null; then
+      ok "SREE repo cloned"
     else
       warn "Could not clone SREE repo — skipping (check SSH key / git access)"
     fi
   fi
 
-  if [ -f "$SREE_CACHE/$SREE_SUBDIR/scripts/install-sree.sh" ]; then
-    bash "$SREE_CACHE/$SREE_SUBDIR/scripts/install-sree.sh" global
+  if [ -f "$SREE_CACHE/scripts/install-sree.sh" ]; then
+    bash "$SREE_CACHE/scripts/install-sree.sh" global
     ok "SREE global install complete"
   elif [ -d "$SREE_CACHE/.git" ]; then
-    warn "SREE install script not found at $SREE_CACHE/$SREE_SUBDIR/scripts/install-sree.sh"
+    warn "SREE install script not found at $SREE_CACHE/scripts/install-sree.sh"
   fi
 fi
 

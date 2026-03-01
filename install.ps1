@@ -244,8 +244,7 @@ if (-not $OurBlock) {
 # ── Step 7: Install SREE framework (global) ──────────────────────────
 
 $SreeCache = Join-Path $env:USERPROFILE '.sendient\sree'
-$SreeRepo = 'git@github.com:Sendient/Sendient.git'
-$SreeSubdir = 'sree'
+$SreeRepo = 'git@github.com:Sendient/sree.git'
 
 if ($NoSree) {
     Write-Info 'Skipping SREE install (-NoSree)'
@@ -268,15 +267,14 @@ if ($NoSree) {
             New-Item -ItemType Directory -Path $sreeParent -Force | Out-Null
         }
         try {
-            & git clone --depth 1 --filter=blob:none --sparse $SreeRepo $SreeCache 2>$null
-            & git -C $SreeCache sparse-checkout set --skip-checks $SreeSubdir
-            Write-Ok 'SREE repo cloned (sparse checkout)'
+            & git clone --depth 1 $SreeRepo $SreeCache 2>$null
+            Write-Ok 'SREE repo cloned'
         } catch {
             Write-Warn 'Could not clone SREE repo — skipping (check SSH key / git access)'
         }
     }
 
-    $sreeInstallScript = Join-Path $SreeCache "$SreeSubdir\scripts\install-sree.sh"
+    $sreeInstallScript = Join-Path $SreeCache 'scripts\install-sree.sh'
     if (Test-Path $sreeInstallScript) {
         $bashCmd = Get-Command bash -ErrorAction SilentlyContinue
         if ($bashCmd) {
