@@ -296,9 +296,11 @@ if ($resolvedClaude -and $resolvedClaude.Source -eq $WrapperPath) {
     Write-Ok "All done! Running 'claude' will now show the Sendient SREE banner."
 } else {
     Write-Ok "Wrapper installed at $WrapperPath"
-    if ($resolvedClaude) {
-        Write-Warn "Your shell may resolve a different 'claude' first ($($resolvedClaude.Source))."
-        Write-Warn "Ensure $InstallDir appears before $(Split-Path $resolvedClaude.Source) in your PATH."
+    $inPath = $env:Path.Split(';') -contains $InstallDir
+    if ($inPath) {
+        Write-Ok "$InstallDir is in PATH (another 'claude' may take priority depending on PATH order)"
+    } else {
+        Write-Warn "$InstallDir is not in PATH — you may need to restart your terminal."
     }
 }
 Write-Host ''

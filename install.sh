@@ -248,7 +248,10 @@ if [ "$RESOLVED" = "$WRAPPER_PATH" ]; then
   ok "All done! Running 'claude' will now show the Sendient SREE banner."
 else
   ok "Wrapper installed at $WRAPPER_PATH"
-  warn "Your shell may resolve a different 'claude' first ($RESOLVED)."
-  warn "Ensure $INSTALL_DIR appears before $(dirname "${RESOLVED:-/usr/local/bin/claude}") in your PATH."
+  if echo "${PATH:-}" | tr ':' '\n' | grep -qxF "$INSTALL_DIR"; then
+    ok "$INSTALL_DIR is in PATH (another 'claude' may take priority depending on PATH order)"
+  else
+    warn "$INSTALL_DIR is not in PATH — you may need to restart your shell."
+  fi
 fi
 printf '\n'
