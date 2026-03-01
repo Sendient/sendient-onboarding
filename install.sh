@@ -162,8 +162,8 @@ case "${PATH:-}" in
   *)
     info "Adding $INSTALL_DIR to PATH..."
     case "${SHELL:-/bin/bash}" in
-      */zsh)  add_to_path "$HOME/.zshrc" ;;
-      */bash) add_to_path "$HOME/.bashrc" ;;
+      */zsh)  add_to_path "$HOME/.zprofile" ;;
+      */bash) add_to_path "$HOME/.bash_profile" ;;
       *)      add_to_path "$HOME/.profile" ;;
     esac
     export PATH="$INSTALL_DIR:$PATH"
