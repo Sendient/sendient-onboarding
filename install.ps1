@@ -269,7 +269,7 @@ if ($NoSree) {
         }
         try {
             & git clone --depth 1 --filter=blob:none --sparse $SreeRepo $SreeCache 2>$null
-            & git -C $SreeCache sparse-checkout set $SreeSubdir
+            & git -C $SreeCache sparse-checkout set --skip-checks $SreeSubdir
             Write-Ok 'SREE repo cloned (sparse checkout)'
         } catch {
             Write-Warn 'Could not clone SREE repo — skipping (check SSH key / git access)'

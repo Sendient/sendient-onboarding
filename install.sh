@@ -227,7 +227,7 @@ else
   else
     mkdir -p "$(dirname "$SREE_CACHE")"
     if git clone --depth 1 --filter=blob:none --sparse "$SREE_REPO" "$SREE_CACHE" 2>/dev/null; then
-      git -C "$SREE_CACHE" sparse-checkout set "$SREE_SUBDIR"
+      git -C "$SREE_CACHE" sparse-checkout set --skip-checks "$SREE_SUBDIR"
       ok "SREE repo cloned (sparse checkout)"
     else
       warn "Could not clone SREE repo — skipping (check SSH key / git access)"
