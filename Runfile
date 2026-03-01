@@ -263,20 +263,13 @@ sree:register() {
         exit 1
     fi
 
-    # If .sree-config exists in cwd, just import it
-    if [ -f ".sree-config" ]; then
-        echo "── Found .sree-config in $(pwd) — importing ──"
-        bash "$SREE_INSTALL" global --import-config "$(pwd)"
-        exit 0
-    fi
-
     # Determine repo name
     REPO="${repo:-}"
     if [ -z "$REPO" ]; then
         REMOTE_URL="$(git remote get-url origin 2>/dev/null || true)"
         if [ -n "$REMOTE_URL" ]; then
             # Extract org/name from SSH or HTTPS URL
-            REPO="$(echo "$REMOTE_URL" | sed -E 's#.*[:/]([^/]+/[^/]+?)(\.git)?$#\1#')"
+            REPO="$(echo "$REMOTE_URL" | sed -E 's#.*[:/]([^/]+/[^/.]+)(\.git)?$#\1#')"
         fi
     fi
 
@@ -286,11 +279,38 @@ sree:register() {
     fi
 
     REPO_NAME="$(basename "$REPO")"
-    echo "── Registering SREE config for $REPO ──"
 
-    # Non-interactive: set GITHUB_REPO so install-sree.sh skips prompts
-    export GITHUB_REPO="$REPO"
-    bash "$SREE_INSTALL" global --config "$REPO_NAME"
+    # If .sree-config exists in cwd, just import it
+    if [ -f ".sree-config" ]; then
+        echo "── Found .sree-config in $(pwd) — importing ──"
+        bash "$SREE_INSTALL" global --import-config "$(pwd)"
+    else
+        echo "── Registering SREE config for $REPO ──"
+        # Non-interactive: set GITHUB_REPO so install-sree.sh skips prompts
+        export GITHUB_REPO="$REPO"
+        bash "$SREE_INSTALL" global --config "$REPO_NAME"
+    fi
+
+    # Ensure DB project row exists (uses Python sqlite3 for cross-platform compat)
+    DB="$HOME/.claude/sree/tracking.db"
+    if [ -f "$DB" ]; then
+        source "$HOME/.claude/sree/config/$REPO_NAME.env" 2>/dev/null || true
+        SC_ENABLED=$([ -n "${SHORTCUT_TEAM_UUID:-}" ] && echo 1 || echo 0)
+        python3 -c "
+import sqlite3, sys
+conn = sqlite3.connect(sys.argv[1])
+conn.execute('''INSERT OR IGNORE INTO projects
+  (repo_name, github_repo, display_name, shortcut_enabled,
+   shortcut_team_uuid, shortcut_team_name, shortcut_org_slug, shortcut_ready_state_id)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+  (sys.argv[2], sys.argv[3], sys.argv[2], int(sys.argv[4]),
+   sys.argv[5], sys.argv[6], sys.argv[7], sys.argv[8]))
+conn.commit(); conn.close()
+" "$DB" "$REPO_NAME" "${GITHUB_REPO:-$REPO}" "$SC_ENABLED" \
+  "${SHORTCUT_TEAM_UUID:-}" "${SHORTCUT_TEAM_NAME:-NO TEAM}" \
+  "${SHORTCUT_ORG_SLUG:-sendient}" "${SHORTCUT_READY_STATE_ID:-500000052}"
+        echo "── Project row created/verified in tracking DB ──"
+    fi
 }
 
 # @desc Update SREE framework (pull latest and re-run global install)
@@ -305,6 +325,431 @@ sree:update() {
     echo "── Updating SREE ──"
     git -C "$SREE_CACHE" pull --ff-only
     echo y | bash "$SREE_CACHE/scripts/install-sree.sh" global
+}
+
+# @desc Execute SQL against the SREE tracking database. Auto-creates DB on first use.
+# @arg query string SQL query to execute
+# @shell python3
+sree:db(query: str) {
+    import sqlite3, os, sys
+
+    DB = os.path.expanduser("~/.claude/sree/tracking.db")
+    SCHEMA = os.path.expanduser("~/.claude/sree/schema.sql")
+
+    created = False
+    if not os.path.isfile(DB):
+        if not os.path.isfile(SCHEMA):
+            print("ERROR: Schema not found at {}. Run: run sree:update".format(SCHEMA), file=sys.stderr)
+            sys.exit(1)
+        os.makedirs(os.path.dirname(DB), exist_ok=True)
+        conn = sqlite3.connect(DB)
+        with open(SCHEMA) as f:
+            conn.executescript(f.read())
+        conn.close()
+        created = True
+        print("-- Database created at {} --".format(DB))
+
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    try:
+        cur.execute(query)
+        if cur.description:
+            headers = [d[0] for d in cur.description]
+            rows = cur.fetchall()
+            if rows:
+                # Calculate column widths
+                widths = [len(h) for h in headers]
+                str_rows = []
+                for row in rows:
+                    vals = [str(v) if v is not None else "" for v in row]
+                    str_rows.append(vals)
+                    for i, v in enumerate(vals):
+                        widths[i] = max(widths[i], len(v))
+                # Print header
+                print("  ".join(h.ljust(widths[i]) for i, h in enumerate(headers)))
+                print("  ".join("-" * widths[i] for i in range(len(headers))))
+                for vals in str_rows:
+                    print("  ".join(v.ljust(widths[i]) for i, v in enumerate(vals)))
+        conn.commit()
+    except Exception as e:
+        print("ERROR: {}".format(e), file=sys.stderr)
+        sys.exit(1)
+    finally:
+        conn.close()
+}
+
+# @desc Query SREE tracking. Actions: status|stories|resume|next|history|my-epics
+# @arg action string Action: status|stories|resume|next|history|my-epics
+# @arg project string Project repo name (auto-detected from git remote if omitted)
+# @arg filters string Optional: "epic=7951", "status=ready-for-dev", "set=7951,8001" (for my-epics), "clear" (for my-epics)
+# @shell python3
+sree:track(action: str, project: str = "", filters: str = "") {
+    import sqlite3, os, sys, subprocess, json
+
+    DB = os.path.expanduser("~/.claude/sree/tracking.db")
+    if not os.path.isfile(DB):
+        print("ERROR: Tracking DB not found. Run: run sree:db \"SELECT 1\"", file=sys.stderr)
+        sys.exit(1)
+
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    # Auto-detect project from git remote
+    if not project:
+        try:
+            url = subprocess.check_output(
+                ["git", "remote", "get-url", "origin"], stderr=subprocess.DEVNULL
+            ).decode().strip()
+            name = os.path.basename(url)
+            project = name[:-4] if name.endswith(".git") else name
+        except Exception:
+            print("ERROR: Could not detect project. Pass --project <name> or run from a git repo.", file=sys.stderr)
+            sys.exit(1)
+
+    # Resolve project_id
+    row = cur.execute("SELECT id FROM projects WHERE repo_name = ?", (project,)).fetchone()
+    if not row:
+        print(f"ERROR: Project '{project}' not registered. Run: run sree:register", file=sys.stderr)
+        sys.exit(1)
+    pid = row["id"]
+
+    # Parse filters
+    fkv = {}
+    if filters:
+        for part in filters.split(","):
+            if "=" in part:
+                k, v = part.split("=", 1)
+                fkv[k.strip()] = v.strip()
+            else:
+                fkv[part.strip()] = True
+
+    # ── Actions ──────────────────────────────────────────────────────
+
+    if action == "status":
+        proj = cur.execute("SELECT * FROM projects WHERE id = ?", (pid,)).fetchone()
+        print(f"── {proj['display_name'] or proj['repo_name']} ──")
+        print(f"  GitHub: {proj['github_repo']}")
+        print(f"  Shortcut: {'enabled' if proj['shortcut_enabled'] else 'disabled'}")
+
+        phases = cur.execute("SELECT * FROM phases WHERE project_id = ? ORDER BY sort_order", (pid,)).fetchall()
+        if phases:
+            print(f"\n  Phases:")
+            for p in phases:
+                print(f"    {p['phase_key']}: {p['status']}" + (f"  (target: {p['target_date']})" if p['target_date'] else ""))
+
+        for st in ['in-progress', 'ready-for-dev', 'review', 'backlog', 'done']:
+            count = cur.execute("SELECT COUNT(*) as c FROM stories WHERE project_id = ? AND status = ?", (pid, st)).fetchone()["c"]
+            if count:
+                print(f"  Stories {st}: {count}")
+
+        # Active sessions
+        sessions = cur.execute("SELECT s.*, st.story_key FROM sessions s LEFT JOIN stories st ON s.story_id = st.id WHERE s.project_id = ? AND s.status = 'active'", (pid,)).fetchall()
+        if sessions:
+            print(f"\n  Active sessions:")
+            for s in sessions:
+                print(f"    #{s['id']} {s['session_type']} — {s['story_key'] or 'no story'} ({s['branch_name'] or 'no branch'})")
+
+    elif action == "stories":
+        status_filter = fkv.get("status", None)
+        epic_filter = fkv.get("epic", None)
+        q = "SELECT s.*, e.epic_key FROM stories s LEFT JOIN epics e ON s.epic_id = e.id WHERE s.project_id = ?"
+        params = [pid]
+        if status_filter:
+            q += " AND s.status = ?"
+            params.append(status_filter)
+        if epic_filter:
+            q += " AND e.epic_number = ?"
+            params.append(int(epic_filter))
+        q += " ORDER BY s.sort_order, s.id"
+        rows = cur.execute(q, params).fetchall()
+        if not rows:
+            print("No stories found matching filters.")
+        else:
+            for r in rows:
+                epic = r["epic_key"] or "?"
+                print(f"  [{r['status']:<14}] {r['story_key']:<45} ({epic})" + (f"  branch: {r['branch_name']}" if r['branch_name'] else ""))
+
+    elif action == "resume":
+        sessions = cur.execute(
+            "SELECT s.*, st.story_key, st.story_file FROM sessions s LEFT JOIN stories st ON s.story_id = st.id WHERE s.project_id = ? AND s.status IN ('active','paused') ORDER BY s.last_active_at DESC",
+            (pid,)
+        ).fetchall()
+        if not sessions:
+            print("No active or paused sessions to resume.")
+        else:
+            print(f"── Resumable sessions ──")
+            for s in sessions:
+                ctx = ""
+                if s["context_json"]:
+                    try:
+                        ctx = f"  context: {json.loads(s['context_json']).get('summary', '')}"
+                    except Exception:
+                        pass
+                print(f"  #{s['id']} [{s['status']}] {s['session_type']} — {s['story_key'] or 'no story'}")
+                print(f"    branch: {s['branch_name'] or '-'}  worktree: {s['worktree_path'] or '-'}")
+                print(f"    last active: {s['last_active_at']}{ctx}")
+
+    elif action == "next":
+        # Find next ready-for-dev story, respecting my_epics filter
+        my_epics_rows = cur.execute(
+            "SELECT e.epic_number FROM my_epics me JOIN epics e ON me.epic_id = e.id WHERE me.project_id = ?", (pid,)
+        ).fetchall()
+        my_epic_nums = [r["epic_number"] for r in my_epics_rows]
+
+        if my_epic_nums:
+            placeholders = ",".join("?" * len(my_epic_nums))
+            q = f"""SELECT s.*, e.epic_key, e.epic_number FROM stories s
+                    JOIN epics e ON s.epic_id = e.id
+                    WHERE s.project_id = ? AND s.status = 'ready-for-dev'
+                    AND e.epic_number IN ({placeholders})
+                    ORDER BY s.sort_order, s.id LIMIT 1"""
+            row = cur.execute(q, [pid] + my_epic_nums).fetchone()
+        else:
+            row = cur.execute(
+                "SELECT s.*, e.epic_key FROM stories s LEFT JOIN epics e ON s.epic_id = e.id WHERE s.project_id = ? AND s.status = 'ready-for-dev' ORDER BY s.sort_order, s.id LIMIT 1",
+                (pid,)
+            ).fetchone()
+
+        if not row:
+            if my_epic_nums:
+                print(f"No ready-for-dev stories in your assigned epics ({', '.join(str(n) for n in my_epic_nums)}).")
+            else:
+                print("No ready-for-dev stories found.")
+        else:
+            print(f"── Next story ──")
+            print(f"  Key:   {row['story_key']}")
+            print(f"  Title: {row['title'] or '-'}")
+            print(f"  Epic:  {row['epic_key'] or '-'}")
+            print(f"  File:  {row['story_file'] or '-'}")
+            if my_epic_nums:
+                print(f"  (filtered to my epics: {', '.join(str(n) for n in my_epic_nums)})")
+
+    elif action == "history":
+        rows = cur.execute(
+            "SELECT s.*, st.story_key FROM sessions s LEFT JOIN stories st ON s.story_id = st.id WHERE s.project_id = ? ORDER BY s.started_at DESC LIMIT 20",
+            (pid,)
+        ).fetchall()
+        if not rows:
+            print("No session history.")
+        else:
+            print(f"── Session history (last 20) ──")
+            for s in rows:
+                print(f"  #{s['id']} [{s['status']:<10}] {s['session_type']:<8} — {s['story_key'] or '-':<40} {s['started_at']}")
+
+    elif action == "my-epics":
+        if fkv.get("clear", False):
+            cur.execute("DELETE FROM my_epics WHERE project_id = ?", (pid,))
+            conn.commit()
+            print("Cleared all my-epic assignments.")
+        elif "set" in fkv:
+            nums = [int(n.strip()) for n in fkv["set"].split(",") if n.strip().isdigit()]
+            if not nums:
+                print("ERROR: Provide epic numbers, e.g. --filters \"set=7951,8001\"", file=sys.stderr)
+                sys.exit(1)
+            # Clear existing
+            cur.execute("DELETE FROM my_epics WHERE project_id = ?", (pid,))
+            inserted = 0
+            for n in nums:
+                epic = cur.execute("SELECT id FROM epics WHERE project_id = ? AND epic_number = ?", (pid, n)).fetchone()
+                if epic:
+                    cur.execute("INSERT OR IGNORE INTO my_epics (project_id, epic_id) VALUES (?, ?)", (pid, epic["id"]))
+                    inserted += 1
+                else:
+                    print(f"  Warning: epic {n} not found in DB — skipped")
+            conn.commit()
+            print(f"Assigned {inserted} epic(s) to my-epics.")
+        else:
+            rows = cur.execute(
+                "SELECT e.epic_key, e.epic_number, e.title, e.status FROM my_epics me JOIN epics e ON me.epic_id = e.id WHERE me.project_id = ? ORDER BY e.sort_order",
+                (pid,)
+            ).fetchall()
+            if not rows:
+                print("No epics assigned. Use --filters \"set=7951,8001\" to assign.")
+            else:
+                print(f"── My epics ({project}) ──")
+                for r in rows:
+                    print(f"  {r['epic_number']} — {r['title'] or r['epic_key']} [{r['status']}]")
+
+    else:
+        print(f"ERROR: Unknown action '{action}'. Use: status|stories|resume|next|history|my-epics", file=sys.stderr)
+        sys.exit(1)
+
+    conn.close()
+}
+
+# @desc Import sprint-status.yaml into SREE tracking DB. Idempotent (UPSERT).
+# @arg yaml_path string Path to sprint-status.yaml
+# @arg project string Project repo name (auto-detected if omitted)
+# @shell python3
+sree:import(yaml_path: str, project: str = "") {
+    import sqlite3, os, sys, subprocess, re
+
+    # Try to import PyYAML
+    try:
+        import yaml
+    except ImportError:
+        print("ERROR: PyYAML not installed. Run: pip3 install pyyaml", file=sys.stderr)
+        sys.exit(1)
+
+    DB = os.path.expanduser("~/.claude/sree/tracking.db")
+    if not os.path.isfile(DB):
+        print("ERROR: Tracking DB not found. Run: run sree:db \"SELECT 1\"", file=sys.stderr)
+        sys.exit(1)
+
+    if not os.path.isfile(yaml_path):
+        print(f"ERROR: File not found: {yaml_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # Auto-detect project
+    if not project:
+        try:
+            url = subprocess.check_output(
+                ["git", "remote", "get-url", "origin"], stderr=subprocess.DEVNULL
+            ).decode().strip()
+            name = os.path.basename(url)
+            project = name[:-4] if name.endswith(".git") else name
+        except Exception:
+            print("ERROR: Could not detect project. Pass --project <name>.", file=sys.stderr)
+            sys.exit(1)
+
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    # Ensure project exists
+    row = cur.execute("SELECT id FROM projects WHERE repo_name = ?", (project,)).fetchone()
+    if not row:
+        print(f"ERROR: Project '{project}' not registered. Run: run sree:register", file=sys.stderr)
+        sys.exit(1)
+    pid = row["id"]
+
+    with open(yaml_path) as f:
+        data = yaml.safe_load(f)
+
+    if not data:
+        print("ERROR: Empty or invalid YAML", file=sys.stderr)
+        sys.exit(1)
+
+    # Patterns
+    phase_re = re.compile(r'^phase-\d+-')
+    epic_re = re.compile(r'^epic-(\d+)$')
+    retro_re = re.compile(r'^epic-\d+-retrospective$')
+    story_re = re.compile(r'^(\d+)-(\d+)-.+')  # {epic_num}-{seq}-{name}
+
+    # Map non-standard statuses to canonical values
+    PHASE_STATUS_MAP = {'complete': 'complete', 'done': 'complete', 'deferred': 'not-started'}
+    EPIC_STATUS_MAP = {'complete': 'done', 'deferred': 'backlog'}
+    STORY_STATUS_MAP = {'complete': 'done', 'dev-complete': 'review', 'deferred': 'backlog', 'optional': 'backlog', 'merged': 'done'}
+
+    phases_count = 0
+    epics_count = 0
+    stories_count = 0
+    sort_order = 0
+
+    for key, val in data.items():
+        if not phase_re.match(key):
+            continue  # skip metadata keys like 'generated', 'project', etc.
+
+        if not isinstance(val, dict):
+            continue
+
+        phase_status = PHASE_STATUS_MAP.get(val.get("status", "not-started"), val.get("status", "not-started"))
+        target_date = val.get("target_date", None)
+
+        cur.execute(
+            """INSERT INTO phases (project_id, phase_key, title, status, target_date, sort_order)
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(project_id, phase_key) DO UPDATE SET
+                 status = excluded.status,
+                 target_date = excluded.target_date,
+                 updated_at = datetime('now')""",
+            (pid, key, key, phase_status, str(target_date) if target_date else None, sort_order)
+        )
+        phases_count += 1
+        phase_id = cur.execute("SELECT id FROM phases WHERE project_id = ? AND phase_key = ?", (pid, key)).fetchone()["id"]
+
+        epic_sort = 0
+        current_epic_id = None
+        current_epic_num = None
+        story_sort = 0
+
+        for entry_key, entry_val in val.items():
+            if entry_key in ("status", "target_date"):
+                continue
+
+            em = epic_re.match(entry_key)
+            if em:
+                epic_num = int(em.group(1))
+                raw_epic_status = entry_val if isinstance(entry_val, str) else "backlog"
+                epic_status = EPIC_STATUS_MAP.get(raw_epic_status, raw_epic_status)
+                cur.execute(
+                    """INSERT INTO epics (project_id, phase_id, epic_key, epic_number, title, status, sort_order)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(project_id, epic_key) DO UPDATE SET
+                         phase_id = excluded.phase_id,
+                         epic_number = excluded.epic_number,
+                         status = excluded.status,
+                         sort_order = excluded.sort_order,
+                         updated_at = datetime('now')""",
+                    (pid, phase_id, entry_key, epic_num, None, epic_status, epic_sort)
+                )
+                epics_count += 1
+                current_epic_id = cur.execute("SELECT id FROM epics WHERE project_id = ? AND epic_key = ?", (pid, entry_key)).fetchone()["id"]
+                current_epic_num = epic_num
+                epic_sort += 1
+                story_sort = 0
+                continue
+
+            if retro_re.match(entry_key):
+                continue  # skip retrospective entries
+
+            sm = story_re.match(entry_key)
+            if sm:
+                story_epic_num = int(sm.group(1))
+                raw_story_status = entry_val if isinstance(entry_val, str) else "backlog"
+                story_status = STORY_STATUS_MAP.get(raw_story_status, raw_story_status)
+                # Find matching epic_id
+                eid = current_epic_id
+                if story_epic_num != current_epic_num:
+                    erow = cur.execute("SELECT id FROM epics WHERE project_id = ? AND epic_number = ?", (pid, story_epic_num)).fetchone()
+                    eid = erow["id"] if erow else None
+
+                cur.execute(
+                    """INSERT INTO stories (project_id, epic_id, story_key, title, status, sort_order)
+                       VALUES (?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(project_id, story_key) DO UPDATE SET
+                         epic_id = excluded.epic_id,
+                         status = excluded.status,
+                         sort_order = excluded.sort_order,
+                         updated_at = datetime('now')""",
+                    (pid, eid, entry_key, None, story_status, story_sort)
+                )
+                stories_count += 1
+                story_sort += 1
+
+        sort_order += 1
+
+    conn.commit()
+    conn.close()
+    print(f"── Import complete ──")
+    print(f"  Project: {project}")
+    print(f"  Phases:  {phases_count}")
+    print(f"  Epics:   {epics_count}")
+    print(f"  Stories: {stories_count}")
+}
+
+# @desc Sync tracking DB with Shortcut (opt-in per project). Stub for future implementation.
+# @arg direction string push|pull|both (default: both)
+# @arg project string Project repo name (auto-detected if omitted)
+sree:sync(direction: str = "both", project: str = "") {
+    direction="${direction:-both}"
+    echo "── sree:sync ──"
+    echo "  Direction: $direction"
+    echo "  Status: NOT YET IMPLEMENTED"
+    echo "  Shortcut sync is planned for a future release."
+    echo "  Use 'run sree:track status' to see current DB state."
 }
 
 # ── END company_claude ────────────────────────────────────────────────
