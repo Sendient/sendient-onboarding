@@ -57,19 +57,40 @@ if (-not $LocalMode -and -not $env:GITHUB_TOKEN -and -not $env:SENDIENT_URL_WRAP
 
 # ── Step 1: Ensure Claude Code is installed ──────────────────────────
 
-$claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
-if ($claudeCmd) {
+$nativeClaude = Join-Path $env:USERPROFILE '.local\bin\claude.exe'
+
+if (Test-Path $nativeClaude) {
+    $claudeVersion = try { & $nativeClaude --version 2>$null } catch { 'unknown' }
+    Write-Ok "Claude Code found — native ($claudeVersion)"
+} elseif (Get-Command claude -ErrorAction SilentlyContinue) {
     $claudeVersion = try { & claude --version 2>$null } catch { 'unknown' }
-    Write-Ok "Claude Code found ($claudeVersion)"
+    Write-Warn "Claude Code found ($claudeVersion) but not native — migrating..."
+    & claude install
+    $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+    Write-Ok 'Migrated to native installer'
 } else {
     Write-Info 'Claude Code not found — installing via native installer...'
     try {
         & ([scriptblock]::Create((Invoke-RestMethod https://claude.ai/install.ps1)))
-        # Ensure the newly installed binary is on PATH for the rest of this script
         $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
         Write-Ok 'Claude Code installed (native)'
     } catch {
         Write-Fail "Native installer failed. Install Claude Code manually:`n     https://code.claude.com/docs/setup"
+    }
+}
+
+# Clean up old npm install if present (leaves shims that cause warnings)
+$npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+if ($npmCmd) {
+    $npmList = try { & npm list -g @anthropic-ai/claude-code 2>$null } catch { $null }
+    if ($npmList -and $npmList -notmatch 'empty') {
+        Write-Info 'Removing old npm-installed Claude Code...'
+        try {
+            & npm uninstall -g @anthropic-ai/claude-code 2>$null
+            Write-Ok 'npm Claude Code removed'
+        } catch {
+            Write-Warn 'npm uninstall failed — you may want to remove it manually'
+        }
     }
 }
 

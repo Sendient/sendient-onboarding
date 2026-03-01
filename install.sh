@@ -63,19 +63,32 @@ fi
 
 # ── Step 1: Ensure Claude Code is installed ─────────────────────────
 
-if command -v claude >/dev/null 2>&1; then
+NATIVE_CLAUDE="$HOME/.local/bin/claude"
+
+if [ -x "$NATIVE_CLAUDE" ]; then
+  CLAUDE_VERSION="$("$NATIVE_CLAUDE" --version 2>/dev/null || echo "unknown")"
+  ok "Claude Code found — native ($CLAUDE_VERSION)"
+elif command -v claude >/dev/null 2>&1; then
   CLAUDE_VERSION="$(claude --version 2>/dev/null || echo "unknown")"
-  ok "Claude Code found ($CLAUDE_VERSION)"
+  warn "Claude Code found ($CLAUDE_VERSION) but not native — migrating..."
+  claude install
+  export PATH="$HOME/.local/bin:$PATH"
+  ok "Migrated to native installer"
 else
   info "Claude Code not found — installing via native installer..."
   if command -v curl >/dev/null 2>&1; then
     curl -fsSL https://claude.ai/install.sh | bash
-    # Ensure the newly installed binary is on PATH for the rest of this script
     export PATH="$HOME/.local/bin:$PATH"
     ok "Claude Code installed (native)"
   else
     fail "curl not found. Install Claude Code manually:\n     https://code.claude.com/docs/setup"
   fi
+fi
+
+# Clean up old npm install if present (leaves shims that cause warnings)
+if command -v npm >/dev/null 2>&1 && npm list -g @anthropic-ai/claude-code >/dev/null 2>&1; then
+  info "Removing old npm-installed Claude Code..."
+  npm uninstall -g @anthropic-ai/claude-code 2>/dev/null && ok "npm Claude Code removed" || warn "npm uninstall failed — you may want to remove it manually"
 fi
 
 # ── Step 2: Ensure `run` task runner is installed ───────────────────
