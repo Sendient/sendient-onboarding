@@ -14,12 +14,22 @@ for %%A in (%*) do (
     if /I "%%~A"=="-v"        set "SHOW_BANNER=0"
 )
 
-rem --- Find the real claude.cmd (skip our own directory) ---
+rem --- Find the real claude binary ---
+rem Prefer the native install location, then fall back to PATH search
 set "SELF_DIR=%~dp0"
 rem Remove trailing backslash for comparison
 if "%SELF_DIR:~-1%"=="\" set "SELF_DIR=%SELF_DIR:~0,-1%"
 
 set "REAL_CLAUDE="
+set "NATIVE_CLAUDE=%USERPROFILE%\.local\bin\claude.exe"
+
+rem 1. Native install (preferred)
+if exist "!NATIVE_CLAUDE!" (
+    set "REAL_CLAUDE=!NATIVE_CLAUDE!"
+    goto :donefind
+)
+
+rem 2. Search PATH, skipping our own directory
 set "SEARCH_PATH=%PATH%"
 
 :findloop
@@ -31,6 +41,10 @@ for /f "tokens=1* delims=;" %%a in ("%SEARCH_PATH%") do (
 rem Remove trailing backslash from DIR for comparison
 if "!DIR:~-1!"=="\" set "DIR=!DIR:~0,-1!"
 if /I "!DIR!"=="!SELF_DIR!" goto :findloop
+if exist "!DIR!\claude.exe" (
+    set "REAL_CLAUDE=!DIR!\claude.exe"
+    goto :donefind
+)
 if exist "!DIR!\claude.cmd" (
     set "REAL_CLAUDE=!DIR!\claude.cmd"
     goto :donefind
@@ -40,7 +54,7 @@ goto :findloop
 :donefind
 if not defined REAL_CLAUDE (
     echo Error: Could not find the real Claude Code binary. >&2
-    echo Install it first: https://docs.anthropic.com/en/docs/claude-code >&2
+    echo Install it first: https://code.claude.com/docs/setup >&2
     exit /b 1
 )
 
