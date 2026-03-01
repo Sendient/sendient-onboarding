@@ -253,7 +253,7 @@ epic_search(id: str) {
 # ── SREE ─────────────────────────────────────────────────────────────
 
 # @desc Register the current repo as a SREE product config. Auto-detects repo name from git remote, or pass --repo org/name.
-# @arg repo? string GitHub repo (org/name). Auto-detected from git remote if omitted.
+# @arg repo string GitHub repo (org/name). Auto-detected from git remote if omitted.
 sree:register() {
     SREE_CACHE="$HOME/.sendient/sree"
     SREE_INSTALL="$SREE_CACHE/scripts/install-sree.sh"
