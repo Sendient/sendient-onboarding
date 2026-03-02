@@ -203,7 +203,7 @@ fi
 # ── Step 5b: Configure global settings permissions ───────────────────
 
 SETTINGS_JSON="$HOME/.claude/settings.json"
-MCP_PERMS=("mcp__runtool__*" "mcp__playwright__*")
+MCP_PERMS=("mcp__runtool__*" "mcp__playwright__*" "Read(~/.claude/sree)")
 
 if [ -f "$SETTINGS_JSON" ] && command -v jq >/dev/null 2>&1; then
   for perm in "${MCP_PERMS[@]}"; do
@@ -220,7 +220,7 @@ elif [ ! -f "$SETTINGS_JSON" ]; then
   cat > "$SETTINGS_JSON" <<SETTINGSEOF
 {
   "permissions": {
-    "allow": ["mcp__runtool__*", "mcp__playwright__*"]
+    "allow": ["mcp__runtool__*", "mcp__playwright__*", "Read(~/.claude/sree)"]
   }
 }
 SETTINGSEOF

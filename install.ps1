@@ -222,7 +222,7 @@ if (Test-Path $claudeJson) {
 # ── Step 5b: Configure global settings permissions ───────────────────
 
 $settingsJson = Join-Path $env:USERPROFILE '.claude\settings.json'
-$mcpPerms = @('mcp__runtool__*', 'mcp__playwright__*')
+$mcpPerms = @('mcp__runtool__*', 'mcp__playwright__*', 'Read(~/.claude/sree)')
 
 if (Test-Path $settingsJson) {
     try {
