@@ -356,17 +356,22 @@ if ($NoSree) {
         }
     }
 
-    $sreeInstallScript = Join-Path $SreeCache 'scripts\install-sree.sh'
-    if (Test-Path $sreeInstallScript) {
+    $sreeInstallPs1 = Join-Path $SreeCache 'scripts\install-sree.ps1'
+    $sreeInstallSh = Join-Path $SreeCache 'scripts\install-sree.sh'
+    if (Test-Path $sreeInstallPs1) {
+        & $sreeInstallPs1 -Command global -Force
+        Write-Ok 'SREE global install complete'
+    } elseif (Test-Path $sreeInstallSh) {
+        # Fallback to bash if PowerShell script not yet available
         $bashCmd = Get-Command bash -ErrorAction SilentlyContinue
         if ($bashCmd) {
-            'y' | & bash $sreeInstallScript global
+            'y' | & bash $sreeInstallSh global
             Write-Ok 'SREE global install complete'
         } else {
-            Write-Warn 'bash not found — cannot run SREE install script. Install Git Bash or WSL.'
+            Write-Warn 'SREE PowerShell installer not found and bash not available. Update the sree repo.'
         }
     } elseif (Test-Path $sreeGitDir) {
-        Write-Warn "SREE install script not found at $sreeInstallScript"
+        Write-Warn "SREE install script not found at $sreeInstallPs1"
     }
 }
 
