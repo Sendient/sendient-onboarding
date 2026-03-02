@@ -130,6 +130,50 @@ if ($runCmd) {
     }
 }
 
+# ── Step 2b: Ensure Python 3 is available ─────────────────────────────
+
+$PyCmd = $null
+$PyVersion = $null
+
+$py3Cmd = Get-Command python3 -ErrorAction SilentlyContinue
+if ($py3Cmd) {
+    $PyVersion = try { & python3 --version 2>&1 } catch { $null }
+    if ($PyVersion -match 'Python 3') { $PyCmd = 'python3' }
+}
+
+if (-not $PyCmd) {
+    $pyCmd2 = Get-Command python -ErrorAction SilentlyContinue
+    if ($pyCmd2) {
+        $PyVersion = try { & python --version 2>&1 } catch { $null }
+        if ($PyVersion -match 'Python 3\.(\d+)') {
+            $minor = [int]$Matches[1]
+            if ($minor -ge 8) { $PyCmd = 'python' }
+        }
+    }
+}
+
+if ($PyCmd) {
+    Write-Ok "Python 3 found ($PyVersion)"
+} else {
+    Write-Info 'Python 3 not found — attempting install via winget...'
+    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+    $installed = $false
+    if ($wingetCmd) {
+        try {
+            & winget install -e --id Python.Python.3.12 --accept-package-agreements --accept-source-agreements 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Ok 'Python 3.12 installed via winget (restart terminal to use)'
+                $installed = $true
+            }
+        } catch {}
+    }
+
+    if (-not $installed) {
+        Write-Warn 'Python 3 not found. SREE tracking tasks (sree:db, sree:track, sree:import, sree:storyfile) require Python 3.8+.'
+        Write-Warn 'Install from: Microsoft Store, https://python.org, or scoop (scoop install python)'
+    }
+}
+
 # ── Step 3: Install wrapper script ───────────────────────────────────
 
 if (-not (Test-Path $InstallDir)) {

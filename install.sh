@@ -117,6 +117,19 @@ else
   fi
 fi
 
+# ── Step 2b: Ensure Python 3 is available ─────────────────────────────
+
+if command -v python3 >/dev/null 2>&1; then
+  PY_VERSION="$(python3 --version 2>&1)"
+  ok "Python 3 found ($PY_VERSION)"
+else
+  warn "Python 3 not found. SREE tracking tasks (sree:db, sree:track, sree:import, sree:storyfile) require Python 3.8+."
+  case "$(uname -s)" in
+    Darwin) warn "  Install via Homebrew: brew install python3" ;;
+    Linux)  warn "  Install via your package manager: apt install python3 / dnf install python3" ;;
+  esac
+fi
+
 # ── Step 3: Install wrapper script ───────────────────────────────────
 
 mkdir -p "$INSTALL_DIR"
