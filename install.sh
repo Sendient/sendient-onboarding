@@ -293,7 +293,7 @@ elif ! command -v git >/dev/null 2>&1; then
 else
   info "Installing SREE framework..."
   if [ -d "$SREE_CACHE/.git" ]; then
-    git -C "$SREE_CACHE" pull --ff-only 2>/dev/null && ok "SREE repo updated" || warn "SREE pull failed — using cached version"
+    git -C "$SREE_CACHE" pull --ff-only --quiet 2>/dev/null && ok "SREE repo updated" || warn "SREE pull failed — using cached version"
   else
     mkdir -p "$(dirname "$SREE_CACHE")"
     if git clone --depth 1 "$SREE_REPO" "$SREE_CACHE" 2>/dev/null; then

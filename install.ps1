@@ -382,7 +382,7 @@ if ($NoSree) {
 
     if (Test-Path $sreeGitDir) {
         try {
-            & git -C $SreeCache pull --ff-only 2>$null
+            & git -C $SreeCache pull --ff-only --quiet 2>$null
             Write-Ok 'SREE repo updated'
         } catch {
             Write-Warn 'SREE pull failed — using cached version'
