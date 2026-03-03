@@ -104,17 +104,33 @@ if ($runCmd) {
 } else {
     Write-Info 'run tool not found — installing...'
     $scoopCmd = Get-Command scoop -ErrorAction SilentlyContinue
-    $cargoCmd = Get-Command cargo -ErrorAction SilentlyContinue
 
     if ($scoopCmd) {
         & scoop install run
         Write-Ok 'run tool installed via scoop'
-    } elseif ($cargoCmd) {
-        & cargo install run
-        if ($LASTEXITCODE -ne 0) { Write-Fail 'cargo install run failed — you may need Visual Studio Build Tools (MSVC). Consider using scoop instead: scoop install run' }
-        Write-Ok 'run tool installed via cargo'
     } else {
-        Write-Fail 'No package manager found. Install scoop (https://scoop.sh) then run: scoop install run'
+        # Download pre-built binary from GitHub releases
+        Write-Info 'Downloading run tool from GitHub releases...'
+        $runZip = Join-Path $env:TEMP 'run-windows.zip'
+        $runExtract = Join-Path $env:TEMP 'run-extract'
+        try {
+            $releaseUrl = 'https://github.com/nihilok/run/releases/latest/download/run-x86_64-pc-windows-msvc.zip'
+            Invoke-WebRequest -Uri $releaseUrl -OutFile $runZip -UseBasicParsing
+            if (Test-Path $runExtract) { Remove-Item $runExtract -Recurse -Force }
+            Expand-Archive -Path $runZip -DestinationPath $runExtract -Force
+            # Find run.exe in the extracted contents (may be nested)
+            $runExe = Get-ChildItem -Path $runExtract -Recurse -Filter 'run.exe' | Select-Object -First 1
+            if (-not $runExe) { throw 'run.exe not found in archive' }
+            $destDir = Join-Path $env:USERPROFILE '.sendient\bin'
+            if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+            Copy-Item $runExe.FullName (Join-Path $destDir 'run.exe') -Force
+            Write-Ok 'run tool installed from GitHub release'
+        } catch {
+            Write-Fail "Failed to download run tool: $_`nInstall scoop (https://scoop.sh) then run: scoop install run"
+        } finally {
+            Remove-Item $runZip -ErrorAction SilentlyContinue
+            Remove-Item $runExtract -Recurse -ErrorAction SilentlyContinue
+        }
     }
 }
 
