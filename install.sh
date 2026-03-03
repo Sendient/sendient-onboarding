@@ -283,7 +283,7 @@ fi
 # ── Step 7: Install SREE framework (global) ──────────────────────────
 
 SREE_CACHE="$HOME/.sendient/sree"
-SREE_REPO="git@github.com:Sendient/sree.git"
+SREE_REPO="https://github.com/Sendient/sree.git"
 
 if $NO_SREE; then
   info "Skipping SREE install (--no-sree)"
