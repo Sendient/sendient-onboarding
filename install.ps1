@@ -106,26 +106,23 @@ if ($runCmd) {
     $scoopCmd = Get-Command scoop -ErrorAction SilentlyContinue
     $cargoCmd = Get-Command cargo -ErrorAction SilentlyContinue
 
+    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
+
     if ($scoopCmd) {
         & scoop install run
         Write-Ok 'run tool installed via scoop'
+    } elseif ($wingetCmd) {
+        & winget install -e --id aspect-build.run --accept-package-agreements --accept-source-agreements
+        if ($LASTEXITCODE -ne 0) { Write-Fail 'winget install run failed' }
+        # winget installs to a PATH dir but current session may not see it yet
+        $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+        Write-Ok 'run tool installed via winget'
     } elseif ($cargoCmd) {
         & cargo install run
         if ($LASTEXITCODE -ne 0) { Write-Fail 'cargo install run failed' }
         Write-Ok 'run tool installed via cargo'
     } else {
-        Write-Info 'No package manager found. Installing Rust toolchain...'
-        # Download and run rustup-init.exe
-        $rustupInit = Join-Path $env:TEMP 'rustup-init.exe'
-        Invoke-WebRequest -Uri 'https://win.rustup.rs/x86_64' -OutFile $rustupInit -UseBasicParsing
-        & $rustupInit -y
-        if ($LASTEXITCODE -ne 0) { Write-Fail 'Rust toolchain installation failed' }
-        # Add cargo to current session PATH
-        $cargobin = Join-Path $env:USERPROFILE '.cargo\bin'
-        $env:Path = "$cargobin;$env:Path"
-        & cargo install run
-        if ($LASTEXITCODE -ne 0) { Write-Fail 'cargo install run failed' }
-        Write-Ok 'run tool installed via cargo (Rust toolchain installed)'
+        Write-Fail 'No package manager found. Install the run tool manually via scoop (scoop install run) or winget (winget install aspect-build.run).'
     }
 }
 
