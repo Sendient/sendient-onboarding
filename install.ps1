@@ -106,23 +106,15 @@ if ($runCmd) {
     $scoopCmd = Get-Command scoop -ErrorAction SilentlyContinue
     $cargoCmd = Get-Command cargo -ErrorAction SilentlyContinue
 
-    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
-
     if ($scoopCmd) {
         & scoop install run
         Write-Ok 'run tool installed via scoop'
-    } elseif ($wingetCmd) {
-        & winget install -e --id aspect-build.run --accept-package-agreements --accept-source-agreements
-        if ($LASTEXITCODE -ne 0) { Write-Fail 'winget install run failed' }
-        # winget installs to a PATH dir but current session may not see it yet
-        $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-        Write-Ok 'run tool installed via winget'
     } elseif ($cargoCmd) {
         & cargo install run
-        if ($LASTEXITCODE -ne 0) { Write-Fail 'cargo install run failed' }
+        if ($LASTEXITCODE -ne 0) { Write-Fail 'cargo install run failed — you may need Visual Studio Build Tools (MSVC). Consider using scoop instead: scoop install run' }
         Write-Ok 'run tool installed via cargo'
     } else {
-        Write-Fail 'No package manager found. Install the run tool manually via scoop (scoop install run) or winget (winget install aspect-build.run).'
+        Write-Fail 'No package manager found. Install scoop (https://scoop.sh) then run: scoop install run'
     }
 }
 
