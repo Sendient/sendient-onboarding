@@ -10,7 +10,7 @@
 #      (a dedicated directory that takes PATH priority over the real claude)
 #   4. Configures MCP runtool + Playwright servers in ~/.claude.json
 #   5. Auto-allows runtool + Playwright MCP tools in ~/.claude/settings.json
-#   6. Installs Runfile tasks (company_claude:*) to ~/.runfile
+#   6. Installs Runfile tasks (onboarding:*) to ~/.runfile
 
 set -euo pipefail
 
@@ -19,7 +19,7 @@ WRAPPER_NAME="claude"
 
 # File URLs — set these to gist raw URLs for no-auth installs, or leave
 # unset to fall back to SENDIENT_REPO_URL + GITHUB_TOKEN.
-REPO_RAW_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/company-claude/main}"
+REPO_RAW_URL="${SENDIENT_REPO_URL:-https://raw.githubusercontent.com/Sendient/sendient-onboarding/main}"
 URL_WRAPPER="${SENDIENT_URL_WRAPPER:-https://gist.githubusercontent.com/MichaelJarvisSendient/63c13dab54a26595d05e9f041a943679/raw/sendient-claude}"
 URL_BANNER="${SENDIENT_URL_BANNER:-https://gist.githubusercontent.com/MichaelJarvisSendient/4bc5d8f5f8dc06bafbfa2857f1fd7fd5/raw/banner.py}"
 URL_RUNFILE="${SENDIENT_URL_RUNFILE:-https://gist.githubusercontent.com/MichaelJarvisSendient/a7f2ebc6d337391d102e5c2febce1200/raw/Runfile}"
@@ -222,8 +222,8 @@ fi
 # ── Step 6: Install Runfile tasks to ~/.runfile ──────────────────────
 
 GLOBAL_RUNFILE="$HOME/.runfile"
-BEGIN_MARKER="# ── BEGIN company_claude ──"
-END_MARKER="# ── END company_claude ──"
+BEGIN_MARKER="# ── BEGIN onboarding ──"
+END_MARKER="# ── END onboarding ──"
 
 # Extract our block from the source Runfile (local mode only)
 if $LOCAL_MODE && [ -f "$SCRIPT_DIR/Runfile" ]; then
@@ -238,7 +238,7 @@ elif ! $LOCAL_MODE; then
 fi
 
 if [ -z "${OUR_BLOCK:-}" ]; then
-  warn "Could not extract company_claude block from Runfile — skipping"
+  warn "Could not extract onboarding block from Runfile — skipping"
 elif [ ! -f "$GLOBAL_RUNFILE" ]; then
   printf '%s\n' "$OUR_BLOCK" > "$GLOBAL_RUNFILE"
   ok "Runfile tasks installed to $GLOBAL_RUNFILE"

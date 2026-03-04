@@ -1,5 +1,5 @@
 # Sendient Claude — Windows Installer (PowerShell)
-# Usage: irm https://raw.githubusercontent.com/Sendient/company-claude/main/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/install.ps1 | iex
 #    or: pwsh ./install.ps1              (from inside the repo)
 #
 # What this does:
@@ -9,7 +9,7 @@
 #   4. Configures MCP runtool + Playwright servers in ~/.claude.json
 #   5. Adds ~/.sendient/bin to User PATH (persistent)
 #   6. Auto-allows runtool + Playwright MCP tools in ~/.claude/settings.json
-#   7. Installs Runfile tasks (company_claude:*) to ~/.runfile
+#   7. Installs Runfile tasks (onboarding:*) to ~/.runfile
 #   8. Clones SREE repo and runs global install (skip with -NoSree)
 
 # Parse flags
@@ -23,7 +23,7 @@ $InstallDir = if ($env:SENDIENT_INSTALL_DIR) { $env:SENDIENT_INSTALL_DIR } else 
 $WrapperName = 'claude.cmd'
 
 # File URLs — set these to gist raw URLs for no-auth installs
-$RepoRawUrl = if ($env:SENDIENT_REPO_URL) { $env:SENDIENT_REPO_URL } else { 'https://raw.githubusercontent.com/Sendient/company-claude/main' }
+$RepoRawUrl = if ($env:SENDIENT_REPO_URL) { $env:SENDIENT_REPO_URL } else { 'https://raw.githubusercontent.com/Sendient/sendient-onboarding/main' }
 $UrlWrapper = if ($env:SENDIENT_URL_WRAPPER) { $env:SENDIENT_URL_WRAPPER } else { 'https://gist.githubusercontent.com/MichaelJarvisSendient/d07007a35bfd873c07790467fbedeca5/raw/sendient-claude.cmd' }
 $UrlBanner = if ($env:SENDIENT_URL_BANNER) { $env:SENDIENT_URL_BANNER } else { 'https://gist.githubusercontent.com/MichaelJarvisSendient/4bc5d8f5f8dc06bafbfa2857f1fd7fd5/raw/banner.py' }
 $UrlRunfile = if ($env:SENDIENT_URL_RUNFILE) { $env:SENDIENT_URL_RUNFILE } else { 'https://gist.githubusercontent.com/MichaelJarvisSendient/a7f2ebc6d337391d102e5c2febce1200/raw/Runfile' }
@@ -316,8 +316,8 @@ if (Test-Path $settingsJson) {
 # ── Step 6: Install Runfile tasks to ~/.runfile ──────────────────────
 
 $GlobalRunfile = Join-Path $env:USERPROFILE '.runfile'
-$BeginMarker = '# ── BEGIN company_claude ──'
-$EndMarker = '# ── END company_claude ──'
+$BeginMarker = '# ── BEGIN onboarding ──'
+$EndMarker = '# ── END onboarding ──'
 
 # Extract our block from source Runfile
 $OurBlock = $null
@@ -352,7 +352,7 @@ if ($LocalMode) {
 }
 
 if (-not $OurBlock) {
-    Write-Warn 'Could not extract company_claude block from Runfile — skipping'
+    Write-Warn 'Could not extract onboarding block from Runfile — skipping'
 } elseif (-not (Test-Path $GlobalRunfile)) {
     Set-Content -Path $GlobalRunfile -Value $OurBlock -Encoding UTF8
     Write-Ok "Runfile tasks installed to $GlobalRunfile"

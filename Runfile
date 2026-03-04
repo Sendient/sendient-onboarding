@@ -1,4 +1,4 @@
-# ── BEGIN company_claude ──────────────────────────────────────────────
+# ── BEGIN onboarding ──────────────────────────────────────────────
 # Sendient Claude — Task Runner
 # Usage: run <task> [args]
 
@@ -8,7 +8,7 @@
 # ── Install & Update ────────────────────────────────────────────────
 
 # @desc Install/update Sendient Claude wrapper, PATH, MCP config, and Runfile tasks
-company_claude:install() {
+onboarding:install() {
     SENDIENT_URL_INSTALL="${SENDIENT_URL_INSTALL:-https://gist.githubusercontent.com/MichaelJarvisSendient/2c97109bf1ee7709b12184e4d2a7db7b/raw/install.sh}"
     echo "── Fetching installer ──"
     curl -fsSL "$SENDIENT_URL_INSTALL" | bash
@@ -17,7 +17,7 @@ company_claude:install() {
 # @desc Install/update Sendient Claude wrapper, PATH, MCP config, and Runfile tasks
 # @os windows
 # @shell powershell
-company_claude:install() {
+onboarding:install() {
     $InstallUrl = if ($env:SENDIENT_URL_INSTALL) { $env:SENDIENT_URL_INSTALL } else { 'https://gist.githubusercontent.com/MichaelJarvisSendient/10974e9c87d86f3d9c8a7fe4fdd3c915/raw/install.ps1' }
     Write-Host '── Fetching installer ──'
     $script = (Invoke-WebRequest -Uri $InstallUrl -UseBasicParsing).Content
@@ -25,20 +25,20 @@ company_claude:install() {
 }
 
 # @desc Update wrapper script, Runfile tasks, and check dependency versions
-company_claude:update() {
+onboarding:update() {
     # Re-run the remote installer (idempotent — updates everything in place)
-    company_claude:install
+    onboarding:install
 }
 
 # @desc Update wrapper script, Runfile tasks, and check dependency versions
 # @os windows
 # @shell powershell
-company_claude:update() {
-    company_claude:install
+onboarding:update() {
+    onboarding:install
 }
 
 # @desc Check installation health
-company_claude:doctor() {
+onboarding:doctor() {
     SENDIENT_INSTALL_DIR="${SENDIENT_INSTALL_DIR:-$HOME/.sendient/bin}"
     SENDIENT_EPICS_DIR="${SENDIENT_EPICS_DIR:?SENDIENT_EPICS_DIR not set}"
     echo "── Sendient Claude Doctor ──"
@@ -106,14 +106,14 @@ company_claude:doctor() {
     if $ok; then
         echo "✓ All checks passed"
     else
-        echo "! Some issues found — run 'run company_claude:install' to fix"
+        echo "! Some issues found — run 'run onboarding:install' to fix"
     fi
 }
 
 # @desc Check installation health
 # @os windows
 # @shell powershell
-company_claude:doctor() {
+onboarding:doctor() {
     $InstallDir = if ($env:SENDIENT_INSTALL_DIR) { $env:SENDIENT_INSTALL_DIR } else { Join-Path $env:USERPROFILE '.sendient\bin' }
     if (-not $env:SENDIENT_EPICS_DIR) { Write-Error 'SENDIENT_EPICS_DIR not set'; exit 1 }
     $ok = $true
@@ -204,12 +204,12 @@ company_claude:doctor() {
     if ($ok) {
         Write-Host '  ✓ All checks passed' -ForegroundColor Green
     } else {
-        Write-Host "  ! Some issues found — run 'run company_claude:install' to fix" -ForegroundColor Yellow
+        Write-Host "  ! Some issues found — run 'run onboarding:install' to fix" -ForegroundColor Yellow
     }
 }
 
 # @desc Uninstall Sendient Claude wrapper
-company_claude:uninstall() {
+onboarding:uninstall() {
     SENDIENT_INSTALL_DIR="${SENDIENT_INSTALL_DIR:-$HOME/.sendient/bin}"
     rm -f "$SENDIENT_INSTALL_DIR/claude"
     echo "✓ Wrapper removed from $SENDIENT_INSTALL_DIR"
@@ -219,11 +219,11 @@ company_claude:uninstall() {
 # @desc Uninstall Sendient Claude wrapper
 # @os windows
 # @shell powershell
-company_claude:uninstall() {
+onboarding:uninstall() {
     $InstallDir = if ($env:SENDIENT_INSTALL_DIR) { $env:SENDIENT_INSTALL_DIR } else { Join-Path $env:USERPROFILE '.sendient\bin' }
     $WrapperPath = Join-Path $InstallDir 'claude.cmd'
     if (Test-Path $WrapperPath) { Remove-Item $WrapperPath -Force }
     Write-Host "  ✓ Wrapper removed from $InstallDir" -ForegroundColor Green
     Write-Host '    Claude Code itself is unchanged — run ''claude'' to use it directly.'
 }
-# ── END company_claude ────────────────────────────────────────────────
+# ── END onboarding ────────────────────────────────────────────────

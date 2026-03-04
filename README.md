@@ -1,4 +1,4 @@
-# Company Claude
+# Sendient Onboarding
 
 ![SREE banner](docs/banner.png)
 
@@ -45,10 +45,10 @@ The installer checks for (or installs) Claude Code and `run`, then:
 
 | Task | Description |
 |------|-------------|
-| `company_claude:install` | Fetch and run the remote installer (works from anywhere) |
-| `company_claude:update` | Alias for `install` — re-runs the installer to update everything |
-| `company_claude:doctor` | Check installation health |
-| `company_claude:uninstall` | Remove the wrapper |
+| `onboarding:install` | Fetch and run the remote installer (works from anywhere) |
+| `onboarding:update` | Alias for `install` — re-runs the installer to update everything |
+| `onboarding:doctor` | Check installation health |
+| `onboarding:uninstall` | Remove the wrapper |
 | `sree:register` | Register the current repo as a SREE product config (auto-detects from git remote, or pass `--repo org/name`) |
 | `sree:update` | Update SREE framework (pull latest and re-run global install) |
 | `sree:db` | Execute SQL against the SREE tracking database |
@@ -80,7 +80,7 @@ Files are published to secret gists via a GitHub Actions workflow on every push 
 | `SENDIENT_EPICS_FILE` | *(required)* | Path to the epics index file |
 | `SENDIENT_URL_WRAPPER` | *(from gist)* | Direct URL to the wrapper script |
 | `SENDIENT_URL_RUNFILE` | *(from gist)* | Direct URL to the Runfile |
-| `SENDIENT_REPO_URL` | `https://raw.githubusercontent.com/Sendient/company-claude/main` | Fallback for remote installs (requires `GITHUB_TOKEN`) |
+| `SENDIENT_REPO_URL` | `https://raw.githubusercontent.com/Sendient/sendient-onboarding/main` | Fallback for remote installs (requires `GITHUB_TOKEN`) |
 
 ## Prerequisites
 

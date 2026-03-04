@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Company Claude is a cross-platform wrapper and tooling system for running Claude Code with the Sendient SREE Framework banner. It distributes via secret GitHub gists so end users need no authentication. The project has no build step, tests, or linting — it's a collection of shell scripts, a Python banner, and a task runner configuration.
+Sendient Onboarding is a cross-platform wrapper and tooling system for running Claude Code with the Sendient SREE Framework banner. It distributes via secret GitHub gists so end users need no authentication. The project has no build step, tests, or linting — it's a collection of shell scripts, a Python banner, and a task runner configuration.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ Company Claude is a cross-platform wrapper and tooling system for running Claude
 
 **Distribution:** A GitHub Actions workflow (`.github/workflows/sync-gists.yml`) syncs 6 key files to secret gists on push to main. Gist URLs are stored as GitHub repo variables (`GIST_URL_*`). The custom action at `.github/actions/sync-file-to-gist/` handles creation and updates.
 
-**Task runner:** The `Runfile` (800+ lines) defines tasks for the `run` tool, with dual bash/PowerShell implementations using `@os` and `@shell` annotations. Task namespaces: `company_claude:*` (install/update/doctor/uninstall), `epic_search`, `sree:*` (register/update/db/track/import/sync).
+**Task runner:** The `Runfile` (800+ lines) defines tasks for the `run` tool, with dual bash/PowerShell implementations using `@os` and `@shell` annotations. Task namespaces: `onboarding:*` (install/update/doctor/uninstall), `epic_search`, `sree:*` (register/update/db/track/import/sync).
 
 **SREE tracking DB:** SQLite at `~/.claude/sree/tracking.db` with tables for projects, phases, epics, stories, sessions, and my_epics. Created lazily by `sree:db`.
 
