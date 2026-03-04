@@ -1,89 +1,35 @@
 # Sendient Onboarding
 
-![SREE banner](docs/banner.png)
+Minimal public bootstrap scripts for setting up a Sendient developer environment.
 
-Wrapper and tooling for running Claude Code with the Sendient SREE methodology banner and [`run`](https://github.com/nihilok/run) task runner integration.
+## Quick Start
 
-## Quick install
+### macOS / Linux / WSL
 
-**macOS / Linux:**
-
-```sh
-# From the repo
-./install.sh
-
-# Remote (no token needed — uses secret gists)
-curl -fsSL https://gist.githubusercontent.com/MichaelJarvisSendient/2c97109bf1ee7709b12184e4d2a7db7b/raw/install.sh | bash
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- local
 ```
 
-**Windows (PowerShell):**
+### Windows (PowerShell)
 
 ```powershell
-# From the repo
-pwsh ./install.ps1
-
-# Remote (no token needed — uses secret gists)
-irm https://gist.githubusercontent.com/MichaelJarvisSendient/10974e9c87d86f3d9c8a7fe4fdd3c915/raw/install.ps1 | iex
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.ps1 -OutFile setup.ps1
+.\setup.ps1
 ```
 
-The installer checks for (or installs) Claude Code and `run`, then:
+## Profiles
 
-1. Copies the `sendient-claude` wrapper to `~/.sendient/bin/claude`
-2. Prepends `~/.sendient/bin` to your PATH
-3. Configures the `runtool` and `playwright` MCP servers in `~/.claude.json`
-4. Auto-allows runtool and Playwright MCP tools in `~/.claude/settings.json`
-5. Installs Runfile tasks to `~/.runfile`
-6. Clones the SREE repo and runs `install-sree.sh global` — installs skills, agents, workflows, engine, and base to `~/.claude/`
+| Profile | Target | Command |
+|---------|--------|---------|
+| `local` | macOS / Linux / WSL dev workstation | `bash -s -- local [--with-repos]` |
+| `agent-runner` | Headless agent VPS | `bash -s -- agent-runner [--multi-tenant]` |
+| `cloud-box` | Cloud dev VPS | `bash -s -- cloud-box [--with-agent-runner]` |
 
-> **Note:** The SREE step requires `git` with SSH access to `github.com/Sendient/Sendient`. Pass `--no-sree` (bash) or `-NoSree` (PowerShell) to skip it.
+## What happens
 
-## What you get
+1. `setup.sh` authenticates with GitHub (guided token creation)
+2. Clones `Sendient/developer-tools` (private)
+3. Delegates to the selected profile's setup script
 
-**Wrapper** — Running `claude` shows the SREE methodology banner before launching the real Claude Code binary. Non-interactive invocations (`--print`, `--json`, etc.) skip the banner.
-
-**Runfile tasks** — Available globally via `run <task>`:
-
-| Task | Description |
-|------|-------------|
-| `onboarding:install` | Fetch and run the remote installer (works from anywhere) |
-| `onboarding:update` | Alias for `install` — re-runs the installer to update everything |
-| `onboarding:doctor` | Check installation health |
-| `onboarding:uninstall` | Remove the wrapper |
-| `sree:register` | Register the current repo as a SREE product config (auto-detects from git remote, or pass `--repo org/name`) |
-| `sree:update` | Update SREE framework (pull latest and re-run global install) |
-| `sree:db` | Execute SQL against the SREE tracking database |
-| `sree:track` | Query SREE tracking (actions: `status`, `stories`, `resume`, `next`, `history`, `my-epics`) |
-| `sree:import` | Import `sprint-status.yaml` into SREE tracking DB (idempotent UPSERT) |
-| `sree:sync` | Sync tracking DB with Shortcut (opt-in per project; stub for future implementation) |
-| `epic_search <id>` | Look up a Shortcut epic by number (e.g. `run epic_search 8894`) |
-
-## Distribution
-
-Files are published to secret gists via a GitHub Actions workflow on every push to `main`. Gist URLs are stored as repository variables:
-
-| Variable | File |
-|----------|------|
-| `GIST_URL_INSTALL_SH` | `install.sh` |
-| `GIST_URL_INSTALL_PS1` | `install.ps1` |
-| `GIST_URL_SENDIENT_CLAUDE` | `sendient-claude` |
-| `GIST_URL_SENDIENT_CLAUDE_CMD` | `sendient-claude.cmd` |
-| `GIST_URL_RUNFILE` | `Runfile` |
-
-**First-time setup:** Create a GitHub PAT with `gist` and `repo` (variables) scopes and add it as the `GIST_TOKEN` repository secret. Then trigger the workflow manually or push to `main`.
-
-## Environment variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SENDIENT_INSTALL_DIR` | `~/.sendient/bin` | Where the wrapper is installed |
-| `SENDIENT_EPICS_DIR` | *(required)* | Path to epic markdown files |
-| `SENDIENT_EPICS_FILE` | *(required)* | Path to the epics index file |
-| `SENDIENT_URL_WRAPPER` | *(from gist)* | Direct URL to the wrapper script |
-| `SENDIENT_URL_RUNFILE` | *(from gist)* | Direct URL to the Runfile |
-| `SENDIENT_REPO_URL` | `https://raw.githubusercontent.com/Sendient/sendient-onboarding/main` | Fallback for remote installs (requires `GITHUB_TOKEN`) |
-
-## Prerequisites
-
-- [Claude Code](https://code.claude.com/docs/setup) (installer will use the native installer if missing)
-- [`run`](https://github.com/nihilok/run) task runner (installer will attempt install if missing)
-- `jq` (for MCP config)
+All tooling, wrapper scripts, and configuration live in `developer-tools`.
+This repo is intentionally minimal so it can remain public.
