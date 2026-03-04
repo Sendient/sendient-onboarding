@@ -11,17 +11,8 @@
 #   4. Configures MCP runtool + Playwright servers in ~/.claude.json
 #   5. Auto-allows runtool + Playwright MCP tools in ~/.claude/settings.json
 #   6. Installs Runfile tasks (company_claude:*) to ~/.runfile
-#   7. Clones SREE repo and runs global install (skip with --no-sree)
 
 set -euo pipefail
-
-# Parse flags
-NO_SREE=false
-for arg in "$@"; do
-  case "$arg" in
-    --no-sree) NO_SREE=true ;;
-  esac
-done
 
 INSTALL_DIR="${SENDIENT_INSTALL_DIR:-$HOME/.sendient/bin}"
 WRAPPER_NAME="claude"
@@ -114,19 +105,6 @@ else
     cargo install run
     ok "run tool installed via cargo (Rust toolchain installed)"
   fi
-fi
-
-# ── Step 2b: Ensure Python 3 is available ─────────────────────────────
-
-if command -v python3 >/dev/null 2>&1; then
-  PY_VERSION="$(python3 --version 2>&1)"
-  ok "Python 3 found ($PY_VERSION)"
-else
-  warn "Python 3 not found. SREE tracking tasks (sree:db, sree:track, sree:import, sree:storyfile) require Python 3.8+."
-  case "$(uname -s)" in
-    Darwin) warn "  Install via Homebrew: brew install python3" ;;
-    Linux)  warn "  Install via your package manager: apt install python3 / dnf install python3" ;;
-  esac
 fi
 
 # ── Step 3: Install wrapper script ───────────────────────────────────
@@ -280,42 +258,12 @@ else
   ok "Runfile tasks appended to $GLOBAL_RUNFILE"
 fi
 
-# ── Step 7: Install SREE framework (global) ──────────────────────────
-
-SREE_CACHE="$HOME/.sendient/sree"
-SREE_REPO="git@github.com:Sendient/sree.git"
-
-if $NO_SREE; then
-  info "Skipping SREE install (--no-sree)"
-elif ! command -v git >/dev/null 2>&1; then
-  warn "git not found — skipping SREE install"
-else
-  info "Installing SREE framework..."
-  if [ -d "$SREE_CACHE/.git" ]; then
-    git -C "$SREE_CACHE" pull --ff-only --quiet 2>/dev/null && ok "SREE repo updated" || warn "SREE pull failed — using cached version"
-  else
-    mkdir -p "$(dirname "$SREE_CACHE")"
-    if git clone --depth 1 "$SREE_REPO" "$SREE_CACHE" 2>/dev/null; then
-      ok "SREE repo cloned"
-    else
-      warn "Could not clone SREE repo — skipping (check SSH key / git access)"
-    fi
-  fi
-
-  if [ -f "$SREE_CACHE/scripts/install-sree.sh" ]; then
-    echo y | bash "$SREE_CACHE/scripts/install-sree.sh" global
-    ok "SREE global install complete"
-  elif [ -d "$SREE_CACHE/.git" ]; then
-    warn "SREE install script not found at $SREE_CACHE/scripts/install-sree.sh"
-  fi
-fi
-
-# ── Step 8: Verify ────────────────────────────────────────────────────
+# ── Step 7: Verify ────────────────────────────────────────────────────
 
 printf '\n'
 RESOLVED="$(command -v claude 2>/dev/null || true)"
 if [ "$RESOLVED" = "$WRAPPER_PATH" ]; then
-  ok "All done! Running 'claude' will now show the Sendient SREE banner."
+  ok "All done! Running 'claude' will now use the Sendient wrapper."
 else
   ok "Wrapper installed at $WRAPPER_PATH"
   if echo "${PATH:-}" | tr ':' '\n' | grep -qxF "$INSTALL_DIR"; then
