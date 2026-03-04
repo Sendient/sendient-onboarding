@@ -2,7 +2,7 @@
 # setup.sh — Unified bootstrap entry point for Sendient developer environments
 #
 # Usage:
-#   curl -fsSL <gist-url> | bash -s -- <profile> [flags...]
+#   curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- <profile> [flags...]
 #   bash setup.sh <profile> [flags...]
 #   bash setup.sh --help
 #   bash setup.sh              # interactive menu
@@ -13,15 +13,13 @@
 #   cloud-box      Cloud dev environment (Codespaces / cloud VPS)
 #
 # Examples:
-#   curl -fsSL <gist-url> | bash -s -- local
-#   curl -fsSL <gist-url> | bash -s -- agent-runner --multi-tenant
-#   curl -fsSL <gist-url> | bash -s -- cloud-box --with-agent-runner
+#   curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- local
+#   curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- agent-runner --multi-tenant
+#   curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- cloud-box --with-agent-runner
 #
 # Distribution:
-#   This script is synced to a GitHub gist via a GitHub Actions workflow
-#   (.github/workflows/sync-setup-gist.yml) on every push to main that
-#   modifies setup.sh. The gist provides a stable, well-known URL for
-#   onboarding documentation.
+#   This script lives in the public Sendient/sendient-onboarding repo.
+#   The canonical copy is in Sendient/developer-tools/setup.sh.
 #
 # Exit codes:
 #   0  Success
@@ -64,8 +62,8 @@ Flags are forwarded to the profile setup script. Common flags:
   --with-repos         (local)        Clone product repos from manifest
 
 Examples:
-  curl -fsSL <gist-url> | bash -s -- local --with-repos
-  curl -fsSL <gist-url> | bash -s -- agent-runner --multi-tenant
+  curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- local --with-repos
+  curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- agent-runner --multi-tenant
   bash setup.sh cloud-box --with-agent-runner
 USAGE
 }
