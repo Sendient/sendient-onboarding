@@ -3,7 +3,6 @@
 # Usage: run <task> [args]
 
 # ── Configuration ────────────────────────────────────────────────────
-# Required env vars: GITHUB_TOKEN, SENDIENT_EPICS_DIR, SENDIENT_EPICS_FILE
 # Optional: SENDIENT_INSTALL_DIR (default: ~/.sendient/bin), SENDIENT_REPO_URL
 
 # ── Install & Update ────────────────────────────────────────────────
@@ -226,56 +225,5 @@ company_claude:uninstall() {
     if (Test-Path $WrapperPath) { Remove-Item $WrapperPath -Force }
     Write-Host "  ✓ Wrapper removed from $InstallDir" -ForegroundColor Green
     Write-Host '    Claude Code itself is unchanged — run ''claude'' to use it directly.'
-}
-
-# ── Epic Lookup ──────────────────────────────────────────────────────
-
-# @desc Look up an epic by number. Searches epic files and my-epics.md. Accepts "8894" or "sc-8894".
-# @arg id string The epic/story ID (e.g. "8894" or "sc-8894")
-# @shell python3
-epic_search(id: str) {
-    import os, re, sys
-
-    epics_dir = os.environ.get("SENDIENT_EPICS_DIR")
-    if not epics_dir:
-        print("✗ SENDIENT_EPICS_DIR not set", file=sys.stderr)
-        sys.exit(1)
-    epics_file = os.environ.get("SENDIENT_EPICS_FILE")
-    if not epics_file:
-        print("✗ SENDIENT_EPICS_FILE not set", file=sys.stderr)
-        sys.exit(1)
-
-    # Normalise: strip "sc-" prefix if present
-    num = re.sub(r'^sc-', '', id, flags=re.IGNORECASE)
-
-    found = False
-
-    # 1. Check epic file
-    epic_path = os.path.join(epics_dir, f"epic-{num}.md")
-    if os.path.isfile(epic_path):
-        print(f"── Epic file: {epic_path} ──\n")
-        with open(epic_path) as f:
-            print(f.read())
-        found = True
-    else:
-        print(f"No epic file found at {epic_path}")
-
-    # 2. Check my-epics.md
-    print(f"\n── my-epics.md ──")
-    if os.path.isfile(epics_file):
-        with open(epics_file) as f:
-            lines = f.readlines()
-        matching = [l.rstrip() for l in lines if num in l]
-        if matching:
-            for line in matching:
-                print(f"  {line}")
-            found = True
-        else:
-            print(f"  {num} not listed in my-epics.md")
-    else:
-        print(f"  File not found: {epics_file}")
-
-    if not found:
-        sys.exit(1)
 }
 # ── END company_claude ────────────────────────────────────────────────

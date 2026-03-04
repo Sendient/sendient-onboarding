@@ -258,6 +258,16 @@ else
   ok "Runfile tasks appended to $GLOBAL_RUNFILE"
 fi
 
+# Ensure sree Runfile is sourced (sree:* tasks live in the sree repo)
+SREE_RUNFILE="$HOME/.sendient/sree/Runfile"
+SREE_SOURCE_LINE="source $SREE_RUNFILE"
+if [ -f "$GLOBAL_RUNFILE" ] && grep -qF "$SREE_SOURCE_LINE" "$GLOBAL_RUNFILE"; then
+  ok "sree Runfile already sourced in $GLOBAL_RUNFILE"
+elif [ -f "$GLOBAL_RUNFILE" ]; then
+  printf '\n%s\n' "$SREE_SOURCE_LINE" >> "$GLOBAL_RUNFILE"
+  ok "sree Runfile source directive added to $GLOBAL_RUNFILE"
+fi
+
 # ── Step 7: Verify ────────────────────────────────────────────────────
 
 printf '\n'

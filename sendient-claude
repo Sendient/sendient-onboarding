@@ -35,6 +35,7 @@ REAL_CLAUDE="$(find_real_claude)" || {
 
 # --- Only show the banner for interactive sessions (no args or interactive flags) ---
 # Skip banner when piped, used with -p/--print, or in non-interactive contexts
+# Skip banner when running under the agent-runner profile (non-interactive)
 show_banner=true
 if [ ! -t 1 ]; then
   show_banner=false
@@ -44,6 +45,13 @@ for arg in "$@"; do
     -p|--print|--json|--version|-v) show_banner=false; break ;;
   esac
 done
+if [[ -f "${HOME}/.sendient/profile" ]]; then
+  _sendient_profile="$(cat "${HOME}/.sendient/profile")"
+  if [[ "${_sendient_profile}" == "agent-runner" ]]; then
+    show_banner=false
+  fi
+  unset _sendient_profile
+fi
 
 if $show_banner; then
   # Try python3 first, then python, skip banner if neither available
