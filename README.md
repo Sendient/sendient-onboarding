@@ -13,7 +13,7 @@ curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/s
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.ps1 | iex
+iwr https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.ps1 -OutFile setup.ps1; .\setup.ps1
 ```
 
 ## Profiles
