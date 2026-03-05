@@ -29,10 +29,9 @@ set -euo pipefail
 
 # ── Constants ────────────────────────────────────────────────────────────────
 readonly DEVELOPER_TOOLS_REPO="Sendient/developer-tools"
-# Default workspace root — local profile overrides to ~/sendient
-SENDIENT_WORKSPACE="${SENDIENT_WORKSPACE:-/workspace}"
+# Default workspace root — set per-profile in main() before use
+SENDIENT_WORKSPACE="${SENDIENT_WORKSPACE:-}"
 export SENDIENT_WORKSPACE
-readonly DEVELOPER_TOOLS_PATH="${SENDIENT_WORKSPACE}/developer-tools"
 readonly VALID_PROFILES=("local" "agent-runner" "cloud-box")
 
 # =============================================================================
@@ -168,25 +167,29 @@ setup_check_prerequisites() {
 # Side-effects: clones or pulls developer-tools into /workspace/developer-tools
 # =============================================================================
 setup_ensure_developer_tools() {
-  if [[ -d "${DEVELOPER_TOOLS_PATH}/.git" ]]; then
-    echo "[INFO] developer-tools found at ${DEVELOPER_TOOLS_PATH} — updating..."
-    if git -C "${DEVELOPER_TOOLS_PATH}" pull --ff-only 2>&1; then
+  local dev_tools_path="${SENDIENT_WORKSPACE}/developer-tools"
+
+  if [[ -d "${dev_tools_path}/.git" ]]; then
+    echo "[INFO] developer-tools found at ${dev_tools_path} — updating..."
+    if git -C "${dev_tools_path}" pull --ff-only 2>&1; then
       echo "[OK]   developer-tools updated"
     else
       echo "[WARN] developer-tools pull failed — continuing with existing version"
     fi
   else
-    echo "[INFO] Cloning developer-tools to ${DEVELOPER_TOOLS_PATH}..."
+    echo "[INFO] Cloning developer-tools to ${dev_tools_path}..."
 
-    # Ensure /workspace exists
-    if [[ ! -d "/workspace" ]]; then
-      echo "[INFO] Creating /workspace directory..."
-      sudo mkdir -p /workspace
-      sudo chown "$(id -u):$(id -g)" /workspace
+    # Ensure workspace directory exists
+    if [[ ! -d "${SENDIENT_WORKSPACE}" ]]; then
+      echo "[INFO] Creating ${SENDIENT_WORKSPACE} directory..."
+      mkdir -p "${SENDIENT_WORKSPACE}" 2>/dev/null || {
+        sudo mkdir -p "${SENDIENT_WORKSPACE}"
+        sudo chown "$(id -u):$(id -g)" "${SENDIENT_WORKSPACE}"
+      }
     fi
 
-    if gh repo clone "${DEVELOPER_TOOLS_REPO}" "${DEVELOPER_TOOLS_PATH}" 2>&1; then
-      echo "[OK]   developer-tools cloned to ${DEVELOPER_TOOLS_PATH}"
+    if gh repo clone "${DEVELOPER_TOOLS_REPO}" "${dev_tools_path}" 2>&1; then
+      echo "[OK]   developer-tools cloned to ${dev_tools_path}"
     else
       echo "[FAIL] Could not clone developer-tools" >&2
       exit 1
@@ -258,7 +261,7 @@ setup_delegate() {
   local profile="${1}"
   shift
 
-  local profile_script="${DEVELOPER_TOOLS_PATH}/profiles/${profile}/setup.sh"
+  local profile_script="${SENDIENT_WORKSPACE}/developer-tools/profiles/${profile}/setup.sh"
 
   if [[ ! -f "${profile_script}" ]]; then
     echo "[FAIL] Profile script not found: ${profile_script}" >&2
@@ -312,6 +315,17 @@ main() {
 
   echo "[INFO] Selected profile: ${profile}"
   echo ""
+
+  # Set workspace root based on profile (if not already set via env)
+  if [[ -z "${SENDIENT_WORKSPACE}" ]]; then
+    if [[ "${profile}" == "local" ]]; then
+      SENDIENT_WORKSPACE="${HOME}/sendient"
+    else
+      SENDIENT_WORKSPACE="/workspace"
+    fi
+    export SENDIENT_WORKSPACE
+  fi
+  echo "[INFO] Workspace: ${SENDIENT_WORKSPACE}"
 
   # Check prerequisites
   setup_check_prerequisites
