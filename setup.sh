@@ -89,12 +89,14 @@ setup_detect_os() {
       fi
       ;;
     MINGW*|MSYS*)
-      echo "[INFO] Git Bash detected — use PowerShell or WSL2 instead." >&2
+      echo "[INFO] Git Bash detected - use PowerShell instead." >&2
       echo "" >&2
-      echo "  PowerShell:  Invoke-WebRequest -Uri https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.ps1 -OutFile setup.ps1; .\\setup.ps1" >&2
-      echo "  WSL2:        wsl bash -c 'curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- local'" >&2
+      echo "  Windows-native:  .\\setup.ps1 --native    (tools in PowerShell, repos at ~\\sendient)" >&2
+      echo "  WSL:             .\\setup.ps1 --wsl       (tools inside WSL Ubuntu)" >&2
+      echo "  Interactive:     .\\setup.ps1             (choose at prompt)" >&2
       echo "" >&2
-      echo "  WSL2 not installed? Run:  wsl --install" >&2
+      echo "  Download setup.ps1:" >&2
+      echo "    Invoke-WebRequest -Uri https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.ps1 -OutFile setup.ps1" >&2
       exit 1
       ;;
     *)
