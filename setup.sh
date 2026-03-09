@@ -337,6 +337,10 @@ main() {
   fi
   echo "[INFO] Workspace: ${SENDIENT_WORKSPACE}"
 
+  # Ensure SENDIENT_HOME exists (framework/tooling repos location)
+  export SENDIENT_HOME="${SENDIENT_HOME:-${HOME}/.sendient}"
+  mkdir -p "${SENDIENT_HOME}"
+
   # Check prerequisites
   setup_check_prerequisites
   echo ""
