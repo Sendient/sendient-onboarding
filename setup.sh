@@ -160,6 +160,9 @@ setup_check_prerequisites() {
   else
     echo "[OK]   gh is authenticated"
   fi
+
+  # Configure gh as git credential helper so git pull/push work without prompts
+  gh auth setup-git 2>/dev/null || true
 }
 
 # =============================================================================
