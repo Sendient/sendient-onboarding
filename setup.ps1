@@ -32,6 +32,10 @@ foreach ($arg in $args) {
     }
 }
 
+# ── Ensure safe working directory ──────────────────────────────────────────
+# Elevated PowerShell defaults to C:\Windows\System32 — switch to home dir
+Set-Location $env:USERPROFILE
+
 # ── Banner ───────────────────────────────────────────────────────────────────
 
 Write-Host ""
