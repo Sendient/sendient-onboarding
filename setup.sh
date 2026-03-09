@@ -320,10 +320,10 @@ main() {
 
   # Set workspace root based on profile (if not already set via env)
   if [[ -z "${SENDIENT_WORKSPACE}" ]]; then
-    if [[ "${profile}" == "local" ]]; then
-      SENDIENT_WORKSPACE="${HOME}/sendient"
-    else
+    if [[ "${profile}" == "agent-runner" ]]; then
       SENDIENT_WORKSPACE="/workspace"
+    else
+      SENDIENT_WORKSPACE="${HOME}/sendient"
     fi
     export SENDIENT_WORKSPACE
   fi
