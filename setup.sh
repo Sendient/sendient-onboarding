@@ -138,9 +138,9 @@ setup_check_prerequisites() {
     echo "  2. Set expiration to 90 days (recommended), then click 'Generate token' and copy it."
     echo ""
 
-    if [[ -t 0 ]]; then
+    if [[ -t 0 ]] || [[ -r /dev/tty ]]; then
       echo -n "  3. Paste your token here: "
-      read -r gh_token
+      read -r gh_token </dev/tty
 
       if [[ -z "${gh_token}" ]]; then
         echo "[FAIL] No token provided." >&2
