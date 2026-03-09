@@ -7,6 +7,12 @@ Minimal public bootstrap scripts for setting up a Sendient developer environment
 ### macOS / Linux / WSL
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash
+```
+
+This launches an interactive menu to choose your profile. To skip the menu, pass a profile name:
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- local
 ```
 
