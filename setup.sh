@@ -279,7 +279,9 @@ setup_delegate() {
 
   echo "[INFO] Delegating to ${profile} profile setup..."
   echo ""
-  exec "${profile_script}" "$@"
+  # Redirect stdin from /dev/tty so the profile script can prompt interactively
+  # even when the onboarding script was piped via curl | bash
+  exec "${profile_script}" "$@" </dev/tty
 }
 
 # =============================================================================
