@@ -184,13 +184,16 @@ setup_ensure_developer_tools() {
   else
     echo "[INFO] Cloning developer-tools to ${dev_tools_path}..."
 
-    # Ensure workspace directory exists
+    # Ensure workspace directory exists and is writable
     if [[ ! -d "${SENDIENT_WORKSPACE}" ]]; then
       echo "[INFO] Creating ${SENDIENT_WORKSPACE} directory..."
       mkdir -p "${SENDIENT_WORKSPACE}" 2>/dev/null || {
         sudo mkdir -p "${SENDIENT_WORKSPACE}"
         sudo chown "$(id -u):$(id -g)" "${SENDIENT_WORKSPACE}"
       }
+    elif [[ ! -w "${SENDIENT_WORKSPACE}" ]]; then
+      echo "[INFO] Fixing ownership on ${SENDIENT_WORKSPACE}..."
+      sudo chown "$(id -u):$(id -g)" "${SENDIENT_WORKSPACE}"
     fi
 
     if gh repo clone "${DEVELOPER_TOOLS_REPO}" "${dev_tools_path}" 2>&1; then
