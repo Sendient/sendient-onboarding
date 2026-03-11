@@ -18,8 +18,9 @@
 #   curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- cloud-box --with-agent-runner
 #
 # Distribution:
-#   This script lives in the public Sendient/sendient-onboarding repo.
-#   The canonical copy is in Sendient/developer-tools/setup.sh.
+#   This is a copy of the canonical Sendient/developer-tools/setup.sh.
+#   It lives in the public sendient-onboarding repo for unauthenticated
+#   curl|bash access. Keep in sync with the canonical copy.
 #
 # Exit codes:
 #   0  Success
