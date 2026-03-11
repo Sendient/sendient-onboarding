@@ -140,6 +140,7 @@ setup_check_prerequisites() {
     echo ""
 
     if [[ -t 0 ]] || [[ -r /dev/tty ]]; then
+      local gh_token=""
       echo -n "  3. Paste your token here: "
       read -r gh_token </dev/tty
 
