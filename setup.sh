@@ -329,8 +329,12 @@ main() {
   echo ""
 
   # Set workspace root based on profile (if not already set via env)
+  # VPS profiles (agent-runner, cloud-box) use /workspace if it exists;
+  # local profile always uses ~/sendient.
   if [[ -z "${SENDIENT_WORKSPACE}" ]]; then
-    if [[ "${profile}" == "agent-runner" ]]; then
+    if [[ "${profile}" == "local" ]]; then
+      SENDIENT_WORKSPACE="${HOME}/sendient"
+    elif [[ -d "/workspace" ]]; then
       SENDIENT_WORKSPACE="/workspace"
     else
       SENDIENT_WORKSPACE="${HOME}/sendient"
