@@ -55,13 +55,17 @@ On Windows, `setup.ps1` offers two modes:
 
 The profile setup then installs:
 
-- **Toolchain validation** — git, gh, node, pnpm (required); uv, ruff, pre-commit, shellcheck (optional)
+- **Node.js and pnpm** — auto-installed via [Volta](https://volta.sh) on macOS/Linux/WSL; auto-upgraded when below minimum version
+- **uv, ruff, pre-commit** — auto-installed (uv first, then ruff and pre-commit via uv)
+- **Toolchain validation** — git, gh (required prerequisites); node, pnpm, uv, ruff, pre-commit, shellcheck (auto-installed or validated)
 - **SREE lifecycle** — skills, agents, workflows, and engine
 - **`run` task runner** — with automatic update checks
 - **Claude Code wrapper** — `sendient-claude` command with SREE framework banner
 - **MCP servers and tool permissions** — configured in `~/.claude.json` and `~/.claude/settings.json`
 - **git-worktree-crypt** — for working with encrypted repos
 - **Product repos** — optional (`--with-repos` flag)
+
+**Keeping tools up to date:** Re-run the setup command at any time. It will upgrade node, pnpm, and the `run` tool if newer versions are available, and skip everything already current.
 
 ## Platform Support
 
