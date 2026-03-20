@@ -57,9 +57,13 @@ Profiles:
   cloud-box      Cloud dev environment (Codespaces / cloud VPS)
 
 Flags are forwarded to the profile setup script. Common flags:
+  --single-user        (agent-runner) Run as current user instead of creating sree-agent
   --multi-tenant       (agent-runner) Create multi-tenant worktrees
   --with-agent-runner  (cloud-box)    Include agent-runner components
   --with-repos         (local)        Clone product repos from manifest
+
+Note: agent-runner profile creates a dedicated 'sree-agent' user by default
+for security isolation. Use --single-user for dev/test boxes.
 
 Examples:
   curl -fsSL https://raw.githubusercontent.com/Sendient/sendient-onboarding/main/setup.sh | bash -s -- local --with-repos
@@ -270,6 +274,35 @@ MENU
 setup_delegate() {
   local profile="${1}"
   shift
+
+  # agent-runner profile: default to dedicated user with restricted permissions
+  # Use --single-user to opt out and run everything as the current user
+  if [[ "${profile}" == "agent-runner" ]]; then
+    local has_single_user=false
+    local has_provision=false
+    local has_configure=false
+    for arg in "$@"; do
+      case "${arg}" in
+        --single-user) has_single_user=true ;;
+        --provision)   has_provision=true ;;
+        --configure)   has_configure=true ;;
+      esac
+    done
+
+    if [[ "${has_single_user}" == "true" ]]; then
+      # Strip --single-user (setup-vps.sh doesn't know this flag)
+      local filtered_args=()
+      for arg in "$@"; do
+        [[ "${arg}" != "--single-user" ]] && filtered_args+=("${arg}")
+      done
+      set -- "${filtered_args[@]+"${filtered_args[@]}"}"
+      echo "[INFO] Single-user mode: all steps run as $(whoami)"
+    elif [[ "${has_provision}" == "false" && "${has_configure}" == "false" ]]; then
+      # No explicit mode — inject secure defaults
+      set -- --provision --agent-user sree-agent "$@"
+      echo "[INFO] Default: creating dedicated 'sree-agent' user (use --single-user to opt out)"
+    fi
+  fi
 
   local profile_script="${SENDIENT_WORKSPACE}/developer-tools/profiles/${profile}/setup.sh"
 
