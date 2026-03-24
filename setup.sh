@@ -28,13 +28,13 @@
 #   4  Missing prerequisite (git, gh, or gh auth)
 set -euo pipefail
 
-# ── Reclaim stdin from pipe (curl | bash safe) ────────────────────────────────
-# When invoked as `curl ... | bash`, stdin is the pipe — subprocesses (git clone,
-# ssh host-key prompts) that read from stdin corrupt the terminal line discipline.
-# Redirect stdin from /dev/tty so interactive prompts and subprocesses work correctly.
-if [[ ! -t 0 ]] && [[ -e /dev/tty ]]; then
-  exec 0</dev/tty
-fi
+# ── Pipe-safe git (curl | bash) ───────────────────────────────────────────────
+# When invoked as `curl ... | bash`, stdin is the pipe. Git subprocesses that
+# prompt (SSH host-key, credentials) read from stdin and corrupt the terminal.
+# GIT_TERMINAL_PROMPT=0 disables git's own prompts; StrictHostKeyChecking in
+# GIT_SSH_COMMAND auto-accepts new host keys without reading stdin.
+export GIT_TERMINAL_PROMPT=0
+export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
 
 # ── Constants ────────────────────────────────────────────────────────────────
 readonly DEVELOPER_TOOLS_REPO="Sendient/developer-tools"
