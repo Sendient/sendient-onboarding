@@ -28,6 +28,14 @@
 #   4  Missing prerequisite (git, gh, or gh auth)
 set -euo pipefail
 
+# ── Reclaim stdin from pipe (curl | bash safe) ────────────────────────────────
+# When invoked as `curl ... | bash`, stdin is the pipe — subprocesses (git clone,
+# ssh host-key prompts) that read from stdin corrupt the terminal line discipline.
+# Redirect stdin from /dev/tty so interactive prompts and subprocesses work correctly.
+if [[ ! -t 0 ]] && [[ -e /dev/tty ]]; then
+  exec 0</dev/tty
+fi
+
 # ── Constants ────────────────────────────────────────────────────────────────
 readonly DEVELOPER_TOOLS_REPO="Sendient/developer-tools"
 # Default workspace root — set per-profile in main() before use
